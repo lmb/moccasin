@@ -241,7 +241,7 @@ impl<'a> Iterator for Parser<'a> {
 			return None
 		}
  
-		if let None = self.iter.peek() {
+		if self.iter.peek().is_none() {
 			return None
 		}
 
