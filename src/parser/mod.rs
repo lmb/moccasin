@@ -1,6 +1,3 @@
-#[cfg(test)]
-mod tests;
-
 use std::iter;
 use std::slice;
 
@@ -263,3 +260,5 @@ impl<'a> Iterator for Parser<'a> {
 	}
 }
 
+#[cfg(test)]
+mod tests;
