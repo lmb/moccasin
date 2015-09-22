@@ -1,9 +1,9 @@
-use super::parser::Encoding::*;
-use super::parser::Class::*;
-use super::parser::Type::*;
-use super::parser::Type;
-use super::parser::Token;
-use super::parser::ParseError::*;
+use super::Encoding::*;
+use super::Class::*;
+use super::Type::*;
+use super::Type;
+use super::Token;
+use super::ParseError::*;
 
 #[test]
 fn decode_type()
