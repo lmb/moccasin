@@ -1,0 +1,4 @@
+[package]
+name = "moccasin"
+version = "0.1.0"
+authors = ["lmb <i@lmb.io>"]
