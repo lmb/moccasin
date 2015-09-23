@@ -3,7 +3,8 @@ extern crate moccasin;
 use std::fs::File;
 use std::io::prelude::*;
 
-use moccasin::Parser;
+use moccasin::{Parser, String, Token};
+use moccasin::Type::PrintableString;
 
 // For some reason, cargo test builds this executable and complains about unused
 // code.
@@ -24,8 +25,19 @@ fn main() {
 
 	for token in p {
 		match token {
-			Ok(t) => {
-				println!("{:?}", t);
+			Ok(ref t @ Token{ty: PrintableString, ..}) => {
+				let s = if let Ok(String(string)) = String::from_token(&t) {
+					string
+				} else {
+					"INVALID"
+				};
+
+				let &Token{ref ty, ref enc, ref body, ..} = t;
+
+				println!("{:?}, {:?}, {: >3}: {}", enc, ty, body.len(), s);
+			},
+			Ok(Token{enc, ty, body, ..}) => {
+				println!("{:?}, {:?}, {: >3}", enc, ty, body.len())
 			},
 			Err(why) => panic!("Parse error: {:?}", why)
 		}
