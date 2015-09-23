@@ -1,5 +1,4 @@
-use std::iter;
-use std::slice;
+mod iter;
 
 macro_rules! try_opt {
 	($expr:expr, $err:path) => (match $expr {
@@ -63,7 +62,7 @@ const MULTIPART_TAG: usize   = 31;
 impl Type
 {
 	// 8.1.2
-	pub fn from_bytes<'a, I>(iter: &mut I) -> Result<(Encoding, Type), ParseError>
+	fn from_bytes<'a, I>(iter: &mut I) -> Result<(Encoding, Type), ParseError>
 		where I: Iterator<Item=&'a u8>
 	{
 		use self::Class::*;
@@ -148,18 +147,24 @@ impl Type
 	}
 }
 
-#[derive(Debug, PartialEq)]
-pub struct Token(pub Encoding, pub Type, pub usize);
+#[derive(Debug)]
+pub struct Token<'a>{
+	pub enc: Encoding,
+	pub ty: Type,
+	pub len: usize,
+	pub header: &'a [u8],
+	pub body: &'a [u8],
+}
 
 const LENGTH_MASK: u8 = 0b01111111;
 const MIN_LONG_LENGTH: usize = 128;
 
-impl Token
-{
-	pub fn from_bytes<'a, I>(iter: &mut I) -> Result<Token, ParseError>
-		where I: Iterator<Item=&'a u8>
+impl<'a> Token<'a> {
+	fn from_bytes<'b>(iter: &mut iter::Iter<'b>) -> Result<Token<'b>, ParseError>
 	{
 		use self::ParseError::*;
+
+		let hdr_start = iter.pos();
 
 		let (encoding, ty) = try!(Type::from_bytes(iter));
 
@@ -181,11 +186,21 @@ impl Token
 			return Err(BufferTooShort)
 		}
 
-		Ok(Token(encoding, ty, length))
+		let pos = iter.pos();
+		let header = iter.subslice(hdr_start, pos);
+		let body = iter.subslice(pos, pos + length);
+
+		Ok(Token{
+			enc: encoding,
+			ty: ty,
+			len: length,
+			header: header,
+			body: body,
+		})
 	}
 
-	fn read_longform_length<'a, I>(num_bytes: u8, iter: &mut I) -> Result<usize, ParseError>
-		where I: Iterator<Item=&'a u8>
+	fn read_longform_length<'b, I>(num_bytes: u8, iter: &mut I) -> Result<usize, ParseError>
+		where I: Iterator<Item=&'b u8>
 	{
 		use self::ParseError::*;
 		use std::mem::size_of;
@@ -217,20 +232,20 @@ impl Token
 }
 
 pub struct Parser<'a> {
-	iter: iter::Peekable<slice::Iter<'a, u8>>,
+	iter: iter::Iter<'a>,
 	err: Option<ParseError>
 }
 
 impl<'a> Parser<'a> {
 	pub fn new(bytes: &'a [u8]) -> Parser<'a> {
-		Parser { iter: bytes.iter().peekable(), err: None }
+		Parser { iter: iter::Iter::new(bytes), err: None }
 	}
 }
 
 impl<'a> Iterator for Parser<'a> {
-	type Item = Result<Token, ParseError>;
+	type Item = Result<Token<'a>, ParseError>;
 
-	fn next(&mut self) -> Option<Result<Token, ParseError>> {
+	fn next(&mut self) -> Option<Result<Token<'a>, ParseError>> {
 		use self::ParseError::*;
 		use self::Encoding::*;
 
@@ -244,7 +259,7 @@ impl<'a> Iterator for Parser<'a> {
 
 		let token = Token::from_bytes(&mut self.iter);
 
-		if let Ok(Token(Primitive, _, length)) = token {
+		if let Ok(Token{enc: Primitive, len: length, ..}) = token {
 			// Skip contents for primitive tokens
 			for _ in 0..length {
 				if let None = self.iter.next() {
