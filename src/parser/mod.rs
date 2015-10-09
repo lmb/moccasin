@@ -151,7 +151,6 @@ impl Type
 pub struct Token<'a>{
 	pub enc: Encoding,
 	pub ty: Type,
-	pub len: usize,
 	pub header: &'a [u8],
 	pub body: &'a [u8],
 }
@@ -193,7 +192,6 @@ impl<'a> Token<'a> {
 		Ok(Token{
 			enc: encoding,
 			ty: ty,
-			len: length,
 			header: header,
 			body: body,
 		})
@@ -259,9 +257,9 @@ impl<'a> Iterator for Parser<'a> {
 
 		let token = Token::from_bytes(&mut self.iter);
 
-		if let Ok(Token{enc: Primitive, len: length, ..}) = token {
+		if let Ok(Token{enc: Primitive, body, ..}) = token {
 			// Skip contents for primitive tokens
-			for _ in 0..length {
+			for _ in 0..body.len() {
 				if let None = self.iter.next() {
 					self.err = Some(BufferTooShort);
 					return Some(Err(BufferTooShort))

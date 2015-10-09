@@ -117,10 +117,9 @@ fn x509() {
 
 	for (token, expected) in p.zip(tokens.iter()) {
 		match token {
-			Ok(Token{enc, ty, len, body, ..}) => {
+			Ok(Token{enc, ty, body, ..}) => {
 				assert_eq!(enc,        expected.0);
 				assert_eq!(ty,         expected.1);
-				assert_eq!(len,        expected.2);
 				assert_eq!(body.len(), expected.2);
 			},
 			Err(e) => panic!("Expected {:?}, got {:?}", expected, e)

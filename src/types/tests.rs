@@ -6,7 +6,6 @@ fn utf8string() {
 	let token = Token{
 		enc: Encoding::Primitive,
 		ty: Type::Utf8String,
-		len: 0,
 		header: &[0b0],
 		body: "äöüß·".as_bytes(),
 	};
@@ -22,7 +21,6 @@ fn unsupported_asciistring() {
 	let token = Token{
 		enc: Encoding::Primitive,
 		ty: Type::VisibleString,
-		len: 0,
 		header: &[0b0],
 		body: "Unsupported characters: \x07\x00\x10".as_bytes(),
 	};
@@ -39,7 +37,6 @@ fn printablestring() {
 	let token = Token{
 		enc: Encoding::Primitive,
 		ty: Type::PrintableString,
-		len: 0,
 		header: &[0b0],
 		body: "Western Cape".as_bytes(),
 	};
@@ -55,7 +52,6 @@ fn invalid_printablestring() {
 	let token = Token{
 		enc: Encoding::Primitive,
 		ty: Type::PrintableString,
-		len: 0,
 		header: &[0b0],
 		body: "Unsupported characters: *;<>@".as_bytes(),
 	};
