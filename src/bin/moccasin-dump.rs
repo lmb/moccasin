@@ -32,12 +32,12 @@ fn main() {
 					"INVALID"
 				};
 
-				let &Token{ref ty, ref enc, ref body, ..} = t;
+				let &Token{ref ty, ref enc, ref body, ref depth, ..} = t;
 
-				println!("{:?}, {:?}, {: >3}: {}", enc, ty, body.len(), s);
+				println!("d={: >2} {:?}, {:?}, {: >3}: {}", depth, enc, ty, body.len(), s);
 			},
-			Ok(Token{enc, ty, body, ..}) => {
-				println!("{:?}, {:?}, {: >3}", enc, ty, body.len())
+			Ok(Token{enc, ty, body, depth, ..}) => {
+				println!("d={: >2} {:?}, {:?}, {: >3}", depth, enc, ty, body.len())
 			},
 			Err(why) => panic!("Parse error: {:?}", why)
 		}

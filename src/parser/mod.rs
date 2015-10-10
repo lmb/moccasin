@@ -1,4 +1,5 @@
 mod iter;
+mod stack;
 
 macro_rules! try_opt {
 	($expr:expr, $err:path) => (match $expr {
@@ -13,7 +14,8 @@ pub enum ParseError {
 	InvalidMultipartTag,
 	MultipartTagOverflow,
 	MalformedToken,
-	TokenTooLong
+	TokenTooLong,
+	NestedTooDeep
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -151,6 +153,7 @@ impl Type
 pub struct Token<'a>{
 	pub enc: Encoding,
 	pub ty: Type,
+	pub depth: u8,
 	pub header: &'a [u8],
 	pub body: &'a [u8],
 }
@@ -159,7 +162,7 @@ const LENGTH_MASK: u8 = 0b01111111;
 const MIN_LONG_LENGTH: usize = 128;
 
 impl<'a> Token<'a> {
-	fn from_bytes<'b>(iter: &mut iter::Iter<'b>) -> Result<Token<'b>, ParseError>
+	fn from_bytes<'b>(iter: &mut iter::Iter<'b>, depth: u8) -> Result<Token<'b>, ParseError>
 	{
 		use self::ParseError::*;
 
@@ -192,6 +195,7 @@ impl<'a> Token<'a> {
 		Ok(Token{
 			enc: encoding,
 			ty: ty,
+			depth: depth,
 			header: header,
 			body: body,
 		})
@@ -231,12 +235,61 @@ impl<'a> Token<'a> {
 
 pub struct Parser<'a> {
 	iter: iter::Iter<'a>,
-	err: Option<ParseError>
+	err: Option<ParseError>,
+	stack: stack::FixedStack
 }
 
 impl<'a> Parser<'a> {
 	pub fn new(bytes: &'a [u8]) -> Parser<'a> {
-		Parser { iter: iter::Iter::new(bytes), err: None }
+		Parser {
+			iter: iter::Iter::new(bytes),
+			err: None,
+			stack: stack::FixedStack::new()
+		}
+	}
+
+	fn parse(&mut self) -> Result<Token<'a>, ParseError> {
+		use self::ParseError::*;
+		use self::Encoding::*;
+
+		let token = try!(Token::from_bytes(&mut self.iter, self.stack.depth()));
+		let token_end = self.iter.pos() + token.body.len();
+
+		// If this is not a root token, make sure it fits within its parent
+		if let Some(parent_end) = self.stack.peek() {
+			if token_end > parent_end {
+				return Err(MalformedToken);
+			}
+		}
+
+		match token {
+			Token{enc: Primitive, body, ..} => {
+				// Skip contents for primitive tokens
+				for _ in 0..body.len() {
+					if let None = self.iter.next() {
+						return Err(BufferTooShort);
+					}
+				}
+			},
+			Token{enc: Constructed, ..} => {
+				if let Err(_) = self.stack.push(token_end) {
+					return Err(NestedTooDeep)
+				}
+			}
+		}
+
+		let pos = self.iter.pos();
+
+		// Discard parent tokens which end at this position
+		while let Some(parent_end) = self.stack.peek() {
+			if pos == parent_end {
+				self.stack.discard();
+			} else {
+				break;
+			}
+		}
+
+		Ok(token)
 	}
 }
 
@@ -244,32 +297,21 @@ impl<'a> Iterator for Parser<'a> {
 	type Item = Result<Token<'a>, ParseError>;
 
 	fn next(&mut self) -> Option<Result<Token<'a>, ParseError>> {
-		use self::ParseError::*;
-		use self::Encoding::*;
-
 		if let Some(_) = self.err {
-			return None
+			return None;
 		}
  
 		if self.iter.peek().is_none() {
-			return None
+			return None;
 		}
 
-		let token = Token::from_bytes(&mut self.iter);
-
-		if let Ok(Token{enc: Primitive, body, ..}) = token {
-			// Skip contents for primitive tokens
-			for _ in 0..body.len() {
-				if let None = self.iter.next() {
-					self.err = Some(BufferTooShort);
-					return Some(Err(BufferTooShort))
-				}
-			}
-		} else if let Err(e) = token {
-			self.err = Some(e);
+		match self.parse() {
+			Err(why) => {
+				self.err = Some(why);
+				Some(Err(why))
+			},
+			ok => Some(ok)
 		}
-
-		Some(token)
 	}
 }
 

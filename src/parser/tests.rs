@@ -1,7 +1,7 @@
+use super::*;
 use super::Encoding::*;
 use super::Class::*;
 use super::Type::*;
-use super::Type;
 use super::ParseError::*;
 use super::iter::Iter;
 
@@ -68,4 +68,33 @@ fn overflow_multipart()
 		0b11111111, 0b10000001, 0b10000001, 0b10000001, 0b10000001,
 		0b10000001, 0b10000001, 0b10000001, 0b10000001, 0b00000001
 	])), Err(MultipartTagOverflow))
+}
+
+#[test]
+fn malformed_nesting() {
+	let data = [
+		0b00_1_10000u8, 0b0_0000001,
+			0b00_0_00100, 0b0_0000001, 0b11110000
+	];
+
+	let mut p = Parser::new(&data);
+
+	let seq = p.parse().unwrap();
+	assert!(seq.ty == Sequence);
+
+	let oct = p.parse().unwrap_err();
+	assert_eq!(oct, MalformedToken);
+}
+
+#[test]
+fn truncated_token() {
+	let data = [
+		0b00_1_10000u8, 0b0_0001000,
+			0b00_0_00101, 0b0_0000000
+	];
+
+	let mut p = Parser::new(&data);
+
+	let why = p.parse().unwrap_err();
+	assert_eq!(why, BufferTooShort);
 }
