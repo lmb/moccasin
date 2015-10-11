@@ -1,10 +1,10 @@
 use std::str;
 use std::convert;
 
-use Token;
+use {Token, Encoding};
 use Type::*;
-use TypeError;
-use TypeError::*;
+use super::TypeError;
+use super::TypeError::*;
 
 impl convert::From<str::Utf8Error> for TypeError {
 	fn from(_: str::Utf8Error) -> TypeError {
@@ -12,18 +12,21 @@ impl convert::From<str::Utf8Error> for TypeError {
 	}
 }
 
+#[derive(Debug)]
 pub struct String<'a>(pub &'a str);
 
 impl<'a> String<'a> {
 	pub fn from_token(token: &'a Token) -> Result<String<'a>, TypeError> {
-		let &Token{ref ty, body, ..} = token;
+		if token.enc != Encoding::Primitive {
+			return Err(Malformed)
+		}
 
-		match ty {
-			&Utf8String      => Ok(String(try!{str::from_utf8(body)})),
-			&PrintableString => Self::printable_string(body),
-			&Ia5String       => Self::ascii_string(body),
-			&VisibleString   => Self::ascii_string(body),
-			&T61String       => Self::ascii_string(body),
+		match token.ty {
+			Utf8String      => Ok(String(try!{str::from_utf8(token.body)})),
+			PrintableString => Self::printable_string(token.body),
+			Ia5String       => Self::ascii_string(token.body),
+			VisibleString   => Self::ascii_string(token.body),
+			T61String       => Self::ascii_string(token.body),
 			_ => Err(TypeMismatch)
 		}
 	}
@@ -58,5 +61,11 @@ impl<'a> String<'a> {
 		}
 
 		Ok(String(try!(str::from_utf8(body))))
+	}
+}
+
+impl<'a> PartialEq<&'static str> for String<'a> {
+	fn eq(&self, other: &&'static str) -> bool {
+		self.0 == *other
 	}
 }

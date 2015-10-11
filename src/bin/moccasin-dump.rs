@@ -3,7 +3,8 @@ extern crate moccasin;
 use std::fs::File;
 use std::io::prelude::*;
 
-use moccasin::{Parser, String, Token};
+use moccasin::{Parser, Token};
+use moccasin::types::{String};
 use moccasin::Type::PrintableString;
 
 // For some reason, cargo test builds this executable and complains about unused

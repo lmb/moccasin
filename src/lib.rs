@@ -1,5 +1,4 @@
-pub use self::parser::*;
-pub use self::types::*;
+pub use self::parser::{Parser, Token, Encoding, Class, Type, ParseError};
+pub mod types;
 
 mod parser;
-mod types;
