@@ -33,7 +33,7 @@ pub enum Encoding {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum Type {
+pub enum Tag {
 	Eoc,
 	Bool,
 	Int,
@@ -53,27 +53,27 @@ pub enum Type {
 	Composed(Class, usize)
 }
 
-const CLASS_MASK: u8     = 0b11000000;
-const ENCODING_MASK: u8  = 0b00100000;
-const TAG_MASK: u8       = 0b00011111;
+const TAG_CLASS_MASK: u8     = 0b11000000;
+const TAG_ENCODING_MASK: u8  = 0b00100000;
+const TAG_ID_MASK: u8        = 0b00011111;
 
 const MULTIPART_MASK: u8     = 0b01111111;
 const MULTIPART_SHIFT: usize = 128;
-const MULTIPART_TAG: usize   = 31;
+const MULTIPART_ID: usize    = 31;
 
-impl Type
+impl Tag
 {
 	// 8.1.2
-	fn from_bytes<'a, I>(iter: &mut I) -> Result<(Encoding, Type), ParseError>
+	fn from_bytes<'a, I>(iter: &mut I) -> Result<(Encoding, Tag), ParseError>
 		where I: Iterator<Item=&'a u8>
 	{
 		use self::Class::*;
 		use self::Encoding::*;
-		use self::Type::*;
+		use self::Tag::*;
 
 		let byte = try_opt!(iter.next(), ParseError::BufferTooShort);
 
-		let class = match (byte & CLASS_MASK) >> 6 {
+		let class = match (byte & TAG_CLASS_MASK) >> 6 {
 			0 => Universal,
 			1 => Application,
 			2 => Context,
@@ -81,19 +81,19 @@ impl Type
 			_ => unreachable!()
 		};
 
-		let encoding = match (byte & ENCODING_MASK) >> 5 {
+		let encoding = match (byte & TAG_ENCODING_MASK) >> 5 {
 			0 => Primitive,
 			1 => Constructed,
 			_ => unreachable!()
 		};
 
-		let tag = match (byte & TAG_MASK) as usize {
-			MULTIPART_TAG => try!(Self::read_multipart_tag(iter)),
-			tag => tag
+		let id = match (byte & TAG_ID_MASK) as usize {
+			MULTIPART_ID => try!(Self::read_multipart_tag(iter)),
+			id => id
 		};
 
 		Ok((encoding, match class {
-			Universal => match tag {
+			Universal => match id {
 				 0 => Eoc,
 				 1 => Bool,
 				 2 => Int,
@@ -110,9 +110,9 @@ impl Type
 				23 => UtcTime,
 				24 => GeneralizedTime,
 				26 => VisibleString,
-				 _ => Composed(Universal, tag),
+				 _ => Composed(Universal, id),
 			},
-			_ => Composed(class, tag)
+			_ => Composed(class, id)
 		}))
 	}
 
@@ -136,7 +136,7 @@ impl Type
 			};
 
 			if byte & !MULTIPART_MASK == 0 {
-				if tag < MULTIPART_TAG {
+				if tag < MULTIPART_ID {
 					// Could have been encoded as a simple tag
 					return Err(InvalidMultipartTag)
 				} else {
@@ -152,7 +152,7 @@ impl Type
 #[derive(Debug)]
 pub struct Token<'a>{
 	pub enc: Encoding,
-	pub ty: Type,
+	pub tag: Tag,
 	pub depth: u8,
 	pub header: &'a [u8],
 	pub body: &'a [u8],
@@ -168,7 +168,7 @@ impl<'a> Token<'a> {
 
 		let hdr_start = iter.pos();
 
-		let (encoding, ty) = try!(Type::from_bytes(iter));
+		let (encoding, tag) = try!(Tag::from_bytes(iter));
 
 		// Length (8.1.3)
 		let length = {
@@ -194,7 +194,7 @@ impl<'a> Token<'a> {
 
 		Ok(Token{
 			enc: encoding,
-			ty: ty,
+			tag: tag,
 			depth: depth,
 			header: header,
 			body: body,

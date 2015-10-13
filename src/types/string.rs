@@ -1,8 +1,7 @@
 use std::str;
 use std::convert;
 
-use {Token, Encoding};
-use Type::*;
+use {Token, Encoding, Tag};
 use super::TypeError;
 use super::TypeError::*;
 
@@ -21,12 +20,12 @@ impl<'a> String<'a> {
 			return Err(Malformed)
 		}
 
-		match token.ty {
-			Utf8String      => Ok(String(try!{str::from_utf8(token.body)})),
-			PrintableString => Self::printable_string(token.body),
-			Ia5String       => Self::ascii_string(token.body),
-			VisibleString   => Self::ascii_string(token.body),
-			T61String       => Self::ascii_string(token.body),
+		match token.tag {
+			Tag::Utf8String      => Ok(String(try!{str::from_utf8(token.body)})),
+			Tag::PrintableString => Self::printable_string(token.body),
+			Tag::Ia5String       => Self::ascii_string(token.body),
+			Tag::VisibleString   => Self::ascii_string(token.body),
+			Tag::T61String       => Self::ascii_string(token.body),
 			_ => Err(TypeMismatch)
 		}
 	}

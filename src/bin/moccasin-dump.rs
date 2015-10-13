@@ -5,7 +5,7 @@ use std::io::prelude::*;
 
 use moccasin::{Parser, Token};
 use moccasin::types::{String};
-use moccasin::Type::PrintableString;
+use moccasin::Tag::PrintableString;
 
 // For some reason, cargo test builds this executable and complains about unused
 // code.
@@ -26,19 +26,19 @@ fn main() {
 
 	for token in p {
 		match token {
-			Ok(ref t @ Token{ty: PrintableString, ..}) => {
+			Ok(ref t @ Token{tag: PrintableString, ..}) => {
 				let s = if let Ok(String(string)) = String::from_token(&t) {
 					string
 				} else {
 					"INVALID"
 				};
 
-				let &Token{ref ty, ref enc, ref body, ref depth, ..} = t;
+				let &Token{ref tag, ref enc, ref body, ref depth, ..} = t;
 
-				println!("d={: >2} {:?}, {:?}, {: >3}: {}", depth, enc, ty, body.len(), s);
+				println!("d={: >2} {:?}, {:?}, {: >3}: {}", depth, enc, tag, body.len(), s);
 			},
-			Ok(Token{enc, ty, body, depth, ..}) => {
-				println!("d={: >2} {:?}, {:?}, {: >3}", depth, enc, ty, body.len())
+			Ok(Token{enc, tag, body, depth, ..}) => {
+				println!("d={: >2} {:?}, {:?}, {: >3}", depth, enc, tag, body.len())
 			},
 			Err(why) => panic!("Parse error: {:?}", why)
 		}

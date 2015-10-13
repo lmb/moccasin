@@ -1,7 +1,7 @@
 use super::*;
 use super::Encoding::*;
 use super::Class::*;
-use super::Type::*;
+use super::Tag::*;
 use super::ParseError::*;
 use super::iter::Iter;
 
@@ -15,10 +15,10 @@ fn decode_type()
 	];
 
 	for case in &cases {
-		match Type::from_bytes(&mut Iter::new(case.0)) {
-			Ok((encoding, ty)) => {
+		match Tag::from_bytes(&mut Iter::new(case.0)) {
+			Ok((encoding, tag)) => {
 				assert_eq!(encoding, case.1);
-				assert_eq!(ty, case.2);
+				assert_eq!(tag, case.2);
 			},
 			Err(e) => panic!("{:?} for case {:?}", e, case)
 		}
@@ -28,7 +28,7 @@ fn decode_type()
 #[test]
 fn missing_multipart_definition()
 {
-	assert_eq!(Type::from_bytes(&mut Iter::new(&[
+	assert_eq!(Tag::from_bytes(&mut Iter::new(&[
 		0b11011111u8
 	])), Err(BufferTooShort))
 }
@@ -36,7 +36,7 @@ fn missing_multipart_definition()
 #[test]
 fn invalid_multipart_definition()
 {
-	assert_eq!(Type::from_bytes(&mut Iter::new(&[
+	assert_eq!(Tag::from_bytes(&mut Iter::new(&[
 		0b11011111u8, 0b10000001
 	])), Err(BufferTooShort))
 }
@@ -45,7 +45,7 @@ fn invalid_multipart_definition()
 fn padded_multipart()
 {
 	// Extraneous leading zero
-	assert_eq!(Type::from_bytes(&mut Iter::new(&[
+	assert_eq!(Tag::from_bytes(&mut Iter::new(&[
 		0b11011111u8, 0b10000000, 0b01111111
 	])), Err(InvalidMultipartTag))
 }
@@ -54,7 +54,7 @@ fn padded_multipart()
 fn simple_as_multipart()
 {
 	// Could have been encoded as simple tag
-	assert_eq!(Type::from_bytes(&mut Iter::new(&[
+	assert_eq!(Tag::from_bytes(&mut Iter::new(&[
 		0b11011111u8, 0b00000111
 	])), Err(InvalidMultipartTag))
 }
@@ -63,7 +63,7 @@ fn simple_as_multipart()
 fn overflow_multipart()
 {
 	// Overflows tag size (machine dependent, this works for <= 64bit)
-	assert_eq!(Type::from_bytes(&mut Iter::new(&[
+	assert_eq!(Tag::from_bytes(&mut Iter::new(&[
 		0b11011111u8,
 		0b11111111, 0b10000001, 0b10000001, 0b10000001, 0b10000001,
 		0b10000001, 0b10000001, 0b10000001, 0b10000001, 0b00000001
@@ -80,7 +80,7 @@ fn malformed_nesting() {
 	let mut p = Parser::new(&data);
 
 	let seq = p.parse().unwrap();
-	assert!(seq.ty == Sequence);
+	assert!(seq.tag == Sequence);
 
 	let oct = p.parse().unwrap_err();
 	assert_eq!(oct, MalformedToken);

@@ -1,26 +1,14 @@
 extern crate moccasin;
 
-use std::fs::File;
-use std::io::prelude::*;
-
 use moccasin::Encoding::*;
-use moccasin::Type::*;
+use moccasin::Tag::*;
 use moccasin::Class::*;
 use moccasin::Parser;
 use moccasin::Token;
 
 #[test]
 fn x509() {
-	let mut data: Vec<u8> = Vec::new();
-
-	let mut file = match File::open("tests/cert.der") {
-		Err(why) => panic!("Can't open file: {:?}", why),
-		Ok(file) => file,
-	};
-
-	if let Err(why) = file.read_to_end(&mut data) {
-		panic!("Can't read cert.der: {:?}", why)
-	}
+	let data = include_bytes!("cert.der");
 
 	let tokens = [
 		(Constructed, Sequence,             0, 902),
@@ -113,16 +101,16 @@ fn x509() {
 		(Primitive,   Bitstring,            1, 129)
 	];
 
-	let p = Parser::new(&data);
+	let p = Parser::new(data);
 
 	for (token, expected) in p.zip(tokens.iter()) {
 		match token {
-			Ok(Token{enc, ty, depth, body, ..}) => {
+			Ok(Token{enc, tag, depth, body, ..}) => {
 				if depth != expected.2 {
-					panic!("{:?} {:?} {:?} {:?}", enc, ty, depth, expected)
+					panic!("{:?} {:?} {:?} {:?}", enc, tag, depth, expected)
 				}
 				assert_eq!(enc,        expected.0);
-				assert_eq!(ty,         expected.1);
+				assert_eq!(tag,        expected.1);
 				assert_eq!(depth,      expected.2);
 				assert_eq!(body.len(), expected.3);
 			},
