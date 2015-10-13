@@ -10,7 +10,7 @@ const ARC_SHIFT: u8 = 1<<7;
 const ARC_MASK:  u8 = (1<<7) - 1;
 
 // TODO: Add const fn new
-#[derive(Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub struct StaticOid(pub &'static [u32]);
 
 impl fmt::Display for StaticOid {
@@ -32,7 +32,9 @@ impl fmt::Display for StaticOid {
 #[macro_export]
 macro_rules! oid {
 	( $( $x:expr ),* ) => [{
-		StaticOid(&[$( $x, )*])
+		#[allow(dead_code)]
+		static ARCS: &'static [u32] = &[$( $x, )*];
+		$crate::types::StaticOid(&ARCS)
 	}]
 }
 
