@@ -1,5 +1,5 @@
 use {Token, Encoding, Tag};
-use types::{String, Oid, StaticOid, Int};
+use types::{String, Oid, StaticOid, Int, Bitstring, Null, Bool};
 use Error::*;
 
 #[test]
@@ -8,7 +8,7 @@ fn utf8string() {
 		enc: Encoding::Primitive,
 		tag: Tag::Utf8String,
 		depth: 0,
-		header: &[0b0],
+		header: &[],
 		body: "äöüß·".as_bytes(),
 	};
 
@@ -21,7 +21,7 @@ fn unsupported_asciistring() {
 		enc: Encoding::Primitive,
 		tag: Tag::VisibleString,
 		depth: 0,
-		header: &[0b0],
+		header: &[],
 		body: "Unsupported characters: \x07\x00\x10".as_bytes(),
 	};
 
@@ -34,7 +34,7 @@ fn printablestring() {
 		enc: Encoding::Primitive,
 		tag: Tag::PrintableString,
 		depth: 0,
-		header: &[0b0],
+		header: &[],
 		body: "Western Cape".as_bytes(),
 	};
 
@@ -47,7 +47,7 @@ fn invalid_printablestring() {
 		enc: Encoding::Primitive,
 		tag: Tag::PrintableString,
 		depth: 0,
-		header: &[0b0],
+		header: &[],
 		body: "Unsupported characters: *;<>@".as_bytes(),
 	};
 
@@ -60,7 +60,7 @@ fn constructed_string() {
 		enc: Encoding::Constructed,
 		tag: Tag::Utf8String,
 		depth: 0,
-		header: &[0b0],
+		header: &[],
 		body: "äöüß·".as_bytes(),
 	};
 
@@ -75,7 +75,7 @@ fn oid() {
 		enc: Encoding::Primitive,
 		tag: Tag::Oid,
 		depth: 0,
-		header: &[0b0],
+		header: &[],
 		body: &[0b0_1010010, 0b1_1010111, 0b0_0000000]
 	};
 
@@ -89,7 +89,7 @@ fn constructed_oid() {
 		enc: Encoding::Constructed,
 		tag: Tag::Oid,
 		depth: 0,
-		header: &[0b0],
+		header: &[],
 		body: &[0b0_1010010, 0b1_1010111, 0b0_0000000]
 	};
 
@@ -102,7 +102,7 @@ fn truncated_oid() {
 		enc: Encoding::Primitive,
 		tag: Tag::Oid,
 		depth: 0,
-		header: &[0b0],
+		header: &[],
 		body: &[0b0_1010010, 0b1_1010111, 0b1_0000000]
 	};
 
@@ -115,7 +115,7 @@ fn empty_oid() {
 		enc: Encoding::Primitive,
 		tag: Tag::Oid,
 		depth: 0,
-		header: &[0b0],
+		header: &[],
 		body: &[]
 	};
 
@@ -128,7 +128,7 @@ fn int() {
 		enc: Encoding::Primitive,
 		tag: Tag::Int,
 		depth: 0,
-		header: &[0b0],
+		header: &[],
 		body: &[0b101]
 	};
 
@@ -142,7 +142,7 @@ fn negative_int() {
 		enc: Encoding::Primitive,
 		tag: Tag::Int,
 		depth: 0,
-		header: &[0b0],
+		header: &[],
 		body: &[0b11111111]
 	};
 
@@ -156,7 +156,7 @@ fn empty_int() {
 		enc: Encoding::Primitive,
 		tag: Tag::Int,
 		depth: 0,
-		header: &[0b0],
+		header: &[],
 		body: &[]
 	};
 
@@ -169,7 +169,7 @@ fn constructed_int() {
 		enc: Encoding::Constructed,
 		tag: Tag::Int,
 		depth: 0,
-		header: &[0b0],
+		header: &[],
 		body: &[]
 	};
 
@@ -182,7 +182,7 @@ fn invalid_int_padding() {
 		enc: Encoding::Primitive,
 		tag: Tag::Int,
 		depth: 0,
-		header: &[0b0],
+		header: &[],
 		body: &[0b11111111, 0b1_0000000]
 	};
 
@@ -192,7 +192,7 @@ fn invalid_int_padding() {
 		enc: Encoding::Primitive,
 		tag: Tag::Int,
 		depth: 0,
-		header: &[0b0],
+		header: &[],
 		body: &[0b00000000, 0b0_0000000]
 	};
 
@@ -205,9 +205,192 @@ fn decode_large_int() {
 		enc: Encoding::Primitive,
 		tag: Tag::Int,
 		depth: 0,
-		header: &[0b0],
+		header: &[],
 		body: &[0b10000000, 0b00000000]
 	};
 
 	assert_eq!(Int::<i8>::from_token(&token).unwrap_err(), OutOfMemory);
+}
+
+#[test]
+fn bool() {
+	let true_tok = Token{
+		enc: Encoding::Primitive,
+		tag: Tag::Bool,
+		depth: 0,
+		header: &[],
+		body: &[0xFF]
+	};
+
+	let Bool(b) = Bool::from_token(&true_tok).unwrap();
+	assert_eq!(b, true);
+
+	let false_tok = Token{
+		enc: Encoding::Primitive,
+		tag: Tag::Bool,
+		depth: 0,
+		header: &[],
+		body: &[0x0]
+	};
+
+	let Bool(b) = Bool::from_token(&false_tok).unwrap();
+	assert_eq!(b, false);
+}
+
+#[test]
+fn invalid_bool() {
+	let wrong_value = Token{
+		enc: Encoding::Primitive,
+		tag: Tag::Bool,
+		depth: 0,
+		header: &[],
+		body: &[0xAB]
+	};
+
+	assert_eq!(Bool::from_token(&wrong_value).unwrap_err(), MalformedToken);
+
+	let too_long = Token{
+		enc: Encoding::Primitive,
+		tag: Tag::Bool,
+		depth: 0,
+		header: &[],
+		body: &[0x0, 0x0]
+	};
+
+	assert_eq!(Bool::from_token(&too_long).unwrap_err(), MalformedToken);
+
+	let wrong_encoding = Token{
+		enc: Encoding::Constructed,
+		tag: Tag::Bool,
+		depth: 0,
+		header: &[],
+		body: &[0x0]
+	};
+
+	assert_eq!(Bool::from_token(&wrong_encoding).unwrap_err(), MalformedToken);
+}
+
+#[test]
+fn null() {
+	let ok = Token{
+		enc: Encoding::Primitive,
+		tag: Tag::Null,
+		depth: 0,
+		header: &[],
+		body: &[]
+	};
+
+	Null::from_token(&ok).unwrap();
+}
+
+#[test]
+fn invalid_null() {
+	let nonempty = Token{
+		enc: Encoding::Primitive,
+		tag: Tag::Null,
+		depth: 0,
+		header: &[],
+		body: &[0xFF]
+	};
+
+	assert_eq!(Null::from_token(&nonempty).unwrap_err(), MalformedToken);
+
+	let wrong_encoding = Token{
+		enc: Encoding::Constructed,
+		tag: Tag::Null,
+		depth: 0,
+		header: &[],
+		body: &[]
+	};
+
+	assert_eq!(Null::from_token(&wrong_encoding).unwrap_err(), MalformedToken);
+}
+
+#[test]
+fn bitstring() {
+	let ok = Token{
+		enc: Encoding::Primitive,
+		tag: Tag::Bitstring,
+		depth: 0,
+		header: &[],
+		body: &[0x4, 0xA3, 0xB4, 0xF0]
+	};
+
+	Bitstring::from_token(&ok).unwrap();
+
+	let empty = Token{
+		enc: Encoding::Primitive,
+		tag: Tag::Bitstring,
+		depth: 0,
+		header: &[],
+		body: &[0x0]
+	};
+
+	Bitstring::from_token(&empty).unwrap();
+}
+
+#[test]
+fn invalid_bitstring() {
+	let unused = Token{
+		enc: Encoding::Primitive,
+		tag: Tag::Bitstring,
+		depth: 0,
+		header: &[],
+		body: &[0x4]
+	};
+
+	assert_eq!(Bitstring::from_token(&unused).unwrap_err(), MalformedToken);
+
+	let empty = Token{
+		enc: Encoding::Primitive,
+		tag: Tag::Bitstring,
+		depth: 0,
+		header: &[],
+		body: &[]
+	};
+
+	assert_eq!(Bitstring::from_token(&empty).unwrap_err(), MalformedToken);
+
+	let wrong_encoding = Token{
+		enc: Encoding::Constructed,
+		tag: Tag::Bitstring,
+		depth: 0,
+		header: &[],
+		body: &[0x0]
+	};
+
+	assert_eq!(Bitstring::from_token(&wrong_encoding).unwrap_err(), MalformedToken);
+}
+
+#[test]
+fn invalid_bitstring_padding() {
+	let long_unused = Token{
+		enc: Encoding::Primitive,
+		tag: Tag::Bitstring,
+		depth: 0,
+		header: &[],
+		body: &[0xC, 0xA3, 0xB0, 0x00]
+	};
+
+	assert_eq!(Bitstring::from_token(&long_unused).unwrap_err(), MalformedToken);
+
+	let extra_padding = Token{
+		enc: Encoding::Primitive,
+		tag: Tag::Bitstring,
+		depth: 0,
+		header: &[],
+		body: &[0x0, 0xA3, 0xB0, 0x00]
+	};
+
+	assert_eq!(Bitstring::from_token(&extra_padding).unwrap_err(), MalformedToken);
+
+	let nonzero_unused = Token{
+		enc: Encoding::Primitive,
+		tag: Tag::Bitstring,
+		depth: 0,
+		header: &[],
+		body: &[0x4, 0xA3, 0xB0, 0xBF]
+	};
+
+	assert_eq!(Bitstring::from_token(&nonzero_unused).unwrap_err(), MalformedToken);
 }
