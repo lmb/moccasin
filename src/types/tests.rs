@@ -1,5 +1,5 @@
 use {Token, Encoding, Tag};
-use types::{String, Oid, StaticOid, Int, Bitstring, Null, Bool};
+use types::{String, Oid, ConstOid, Int, Bitstring, Null, Bool};
 use Error::*;
 
 #[test]
@@ -67,7 +67,7 @@ fn constructed_string() {
 	assert_eq!(String::from_token(&token).unwrap_err(), MalformedToken);
 }
 
-static MYOID: StaticOid = oid![2,2,11136];
+static MYOID: ConstOid = oid![2,2,11136];
 
 #[test]
 fn oid() {
@@ -81,6 +81,9 @@ fn oid() {
 
 	let oid = Oid::from_token(&token).unwrap();
 	assert_eq!(oid, MYOID);
+
+	const MYOID2: ConstOid = oid![2,2,11136];
+	assert_eq!(oid, MYOID2);
 }
 
 #[test]

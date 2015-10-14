@@ -1,5 +1,5 @@
 pub use self::string::String;
-pub use self::oid::{Oid, StaticOid};
+pub use self::oid::{Oid, ConstOid};
 pub use self::int::Int;
 pub use self::bool::Bool;
 pub use self::null::Null;

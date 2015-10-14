@@ -10,11 +10,11 @@ const ARC_MASK:  u8 = (1<<7) - 1;
 
 // TODO: Add const fn new
 #[derive(PartialEq, Eq, Debug)]
-pub struct StaticOid(pub &'static [u32]);
+pub struct ConstOid(pub &'static [u32]);
 
-impl fmt::Display for StaticOid {
+impl fmt::Display for ConstOid {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		try!(write!(f, "StaticOid("));
+		try!(write!(f, "ConstOid("));
 
 		for i in 0..self.0.len() {
 			try!(write!(f, "{}", self.0[i]));
@@ -32,8 +32,8 @@ impl fmt::Display for StaticOid {
 macro_rules! oid {
 	( $( $x:expr ),* ) => [{
 		#[allow(dead_code)]
-		static ARCS: &'static [u32] = &[$( $x, )*];
-		$crate::types::StaticOid(&ARCS)
+		const ARCS: &'static [u32] = &[$( $x, )*];
+		$crate::types::ConstOid(&ARCS)
 	}]
 }
 
@@ -135,8 +135,8 @@ impl fmt::Display for Oid {
 	}
 }
 
-impl PartialEq<StaticOid> for Oid {
-	fn eq(&self, other: &StaticOid) -> bool {
+impl PartialEq<ConstOid> for Oid {
+	fn eq(&self, other: &ConstOid) -> bool {
 		self.n as usize == other.0.len() &&
 			self.arcs[0 .. self.n as usize] == *other.0
 	}
