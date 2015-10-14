@@ -12,6 +12,13 @@ mod int;
 mod bool;
 mod null;
 mod bitstring;
+mod time;
+
+use {Token, Error};
+
+pub trait FromToken<'a> {
+	fn from_token(token: &Token<'a>) -> Result<Self, Error>;
+}
 
 #[cfg(test)]
 mod tests;

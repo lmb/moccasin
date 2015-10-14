@@ -2,8 +2,8 @@ use std::mem::size_of;
 use std::ops::{Shl, BitXor, BitOr};
 use num::traits::{Signed, NumCast, cast};
 
-use {Token, Encoding};
-use Error;
+use {Token, Encoding, Error};
+use types::FromToken;
 use Error::*;
 
 #[derive(Debug)]
@@ -11,10 +11,10 @@ pub struct Int<T>(pub T)
 	// Trait bound from hell
 	where T: Copy + Signed + NumCast + Shl<u8, Output = T> + BitXor<Output = T> + BitOr<Output = T>;
 
-impl<T> Int<T>
+impl<'a, T> FromToken<'a> for Int<T>
 	where T: Copy + Signed + NumCast + Shl<u8, Output = T> + BitXor<Output = T> + BitOr<Output = T>
 {
-	pub fn from_token(token: &Token) -> Result<Int<T>, Error> {
+	fn from_token(token: &Token) -> Result<Int<T>, Error> {
 		if token.enc != Encoding::Primitive {
 			return Err(MalformedToken);
 		}

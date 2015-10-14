@@ -1,5 +1,5 @@
 use {Token, Encoding, Tag};
-use types::{String, Oid, ConstOid, Int, Bitstring, Null, Bool};
+use types::{String, Oid, ConstOid, Int, Bitstring, Null, Bool, FromToken};
 use Error::*;
 
 #[test]

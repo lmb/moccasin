@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::prelude::*;
 
 use moccasin::{Parser, Token};
-use moccasin::types::{String};
+use moccasin::types::{String, FromToken};
 use moccasin::Tag::PrintableString;
 
 // For some reason, cargo test builds this executable and complains about unused

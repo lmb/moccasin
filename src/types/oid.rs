@@ -3,6 +3,7 @@ use std::iter::Peekable;
 use std::slice::Iter;
 
 use {Encoding, Token, Error};
+use types::FromToken;
 use Error::*;
 
 const ARC_SHIFT: u8 = 1<<7;
@@ -43,8 +44,8 @@ pub struct Oid {
 	n: u8,
 }
 
-impl Oid {
-	pub fn from_token(token: &Token) -> Result<Oid, Error> {
+impl<'a> FromToken<'a> for Oid {
+	fn from_token(token: &Token) -> Result<Oid, Error> {
 		if token.enc != Encoding::Primitive {
 			return Err(MalformedToken);
 		}
@@ -77,7 +78,9 @@ impl Oid {
 
 		Ok(oid)
 	}
+}
 
+impl Oid {
 	fn parse_arc<'a>(iter: &mut Iterator<Item=&'a u8>) -> Result<u32, Error> {
 		let mut arc = 0u32;
 

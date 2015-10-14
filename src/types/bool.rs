@@ -1,12 +1,13 @@
 use {Token, Error};
+use types::FromToken;
 use Error::MalformedToken;
 use Encoding::Primitive;
 
 #[derive(Debug)]
 pub struct Bool(pub bool);
 
-impl Bool {
-	pub fn from_token(token: &Token) -> Result<Bool, Error> {
+impl<'a> FromToken<'a> for Bool {
+	fn from_token(token: &Token) -> Result<Bool, Error> {
 		if token.body.len() != 1 || token.enc != Primitive {
 			return Err(MalformedToken);
 		}

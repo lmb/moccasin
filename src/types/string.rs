@@ -2,6 +2,7 @@ use std::str;
 use std::convert;
 
 use {Token, Encoding, Tag, Error};
+use types::FromToken;
 use Error::*;
 
 impl convert::From<str::Utf8Error> for Error {
@@ -13,8 +14,8 @@ impl convert::From<str::Utf8Error> for Error {
 #[derive(Debug)]
 pub struct String<'a>(pub &'a str);
 
-impl<'a> String<'a> {
-	pub fn from_token(token: &'a Token) -> Result<String<'a>, Error> {
+impl<'a> FromToken<'a> for String<'a> {
+	fn from_token(token: &Token<'a>) -> Result<String<'a>, Error> {
 		if token.enc != Encoding::Primitive {
 			return Err(MalformedToken)
 		}
@@ -28,7 +29,9 @@ impl<'a> String<'a> {
 			_ => Err(UnsupportedString)
 		}
 	}
+}
 
+impl<'a> String<'a> {
 	fn printable_string(body: &'a [u8]) -> Result<String<'a>, Error> {
 		// Allowed characters are ( to z, excluding *, ;, <, >, @
 		for byte in body {

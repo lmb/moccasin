@@ -3,14 +3,15 @@ use std::ops::{Shl, Shr, BitOr};
 use num::traits::{Unsigned, NumCast, cast};
 
 use {Token, Error};
+use types::FromToken;
 use Error::{MalformedToken, OutOfMemory};
 use Encoding::Primitive;
 
 #[derive(Debug)]
 pub struct Bitstring<'a>(&'a[u8], u8);
 
-impl<'a> Bitstring<'a> {
-	pub fn from_token(token: &'a Token) -> Result<Bitstring<'a>, Error> {
+impl<'a> FromToken<'a> for Bitstring<'a> {
+	fn from_token(token: &Token<'a>) -> Result<Bitstring<'a>, Error> {
 		// 8.6.2.2 and 10.2
 		// At least one byte of body (which specifies unused bits in last byte)
 		// and of primitive encoding.
@@ -55,7 +56,9 @@ impl<'a> Bitstring<'a> {
 
 		Ok(Bitstring(&token.body[1..], unused))
 	}
+}
 
+impl<'a> Bitstring<'a> {
 	pub fn as_unsigned<T>(&self) -> Result<T, Error>
 		where T: Copy + Unsigned + NumCast + Shl<u8, Output = T> + Shr<u8, Output=T> + BitOr<Output = T>
 	{
