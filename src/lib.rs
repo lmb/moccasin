@@ -2,6 +2,7 @@ extern crate num;
 
 pub use self::parser::{Parser, Token, Encoding, Class, Tag};
 pub mod types;
+pub mod dsl;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Error {
