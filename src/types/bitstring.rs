@@ -1,5 +1,9 @@
+use std::mem::size_of;
+use std::ops::{Shl, Shr, BitOr};
+use num::traits::{Unsigned, NumCast, cast};
+
 use {Token, Error};
-use Error::MalformedToken;
+use Error::{MalformedToken, OutOfMemory};
 use Encoding::Primitive;
 
 #[derive(Debug)]
@@ -50,5 +54,21 @@ impl<'a> Bitstring<'a> {
 		}
 
 		Ok(Bitstring(&token.body[1..], unused))
+	}
+
+	pub fn as_unsigned<T>(&self) -> Result<T, Error>
+		where T: Copy + Unsigned + NumCast + Shl<u8, Output = T> + Shr<u8, Output=T> + BitOr<Output = T>
+	{
+		if self.0.len() > size_of::<T>() {
+			return Err(OutOfMemory);
+		}
+
+		let mut result = T::zero();
+
+		for byte in self.0 {
+			result = (result << 8u8) | cast(*byte).unwrap();
+		}
+
+		Ok(result >> self.1)
 	}
 }

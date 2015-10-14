@@ -319,7 +319,8 @@ fn bitstring() {
 		body: &[0x4, 0xA3, 0xB4, 0xF0]
 	};
 
-	Bitstring::from_token(&ok).unwrap();
+	let r1 = Bitstring::from_token(&ok).unwrap();
+	assert_eq!(r1.as_unsigned::<u32>(), Ok(0xA3B4F));
 
 	let empty = Token{
 		enc: Encoding::Primitive,
@@ -329,7 +330,8 @@ fn bitstring() {
 		body: &[0x0]
 	};
 
-	Bitstring::from_token(&empty).unwrap();
+	let r2 = Bitstring::from_token(&empty).unwrap();
+	assert_eq!(r2.as_unsigned::<u16>(), Ok(0));
 }
 
 #[test]

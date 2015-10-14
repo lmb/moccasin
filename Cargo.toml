@@ -5,3 +5,4 @@ authors = ["lmb <i@lmb.io>"]
 
 [dependencies]
 num = "0.1.27"
+bitflags = "0.3"
