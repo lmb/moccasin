@@ -11,7 +11,7 @@ pub enum Error {
 	MalformedToken,
 	TokenTooLong,
 	NestedTooDeep,
-	TokenMismatch,
+	TokenMismatch{file: &'static str, line: u32, col: u32},
 	OutOfMemory,
 	UnsupportedString,
 	UnsupportedOid,

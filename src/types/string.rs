@@ -25,7 +25,7 @@ impl<'a> String<'a> {
 			Tag::Ia5String       => Self::ascii_string(token.body),
 			Tag::VisibleString   => Self::ascii_string(token.body),
 			Tag::T61String       => Self::ascii_string(token.body),
-			_ => Err(TokenMismatch)
+			_ => Err(UnsupportedString)
 		}
 	}
 
