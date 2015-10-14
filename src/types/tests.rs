@@ -1,5 +1,5 @@
 use {Token, Encoding, Tag};
-use types::{String, Oid, ConstOid, Int, Bitstring, Null, Bool, FromToken};
+use types::{String, Oid, ConstOid, Int, Bitstring, Null, Bool, Time, FromToken};
 use Error::*;
 
 #[test]
@@ -398,4 +398,70 @@ fn invalid_bitstring_padding() {
 	};
 
 	assert_eq!(Bitstring::from_token(&nonzero_unused).unwrap_err(), MalformedToken);
+}
+
+#[test]
+fn time() {
+	let utctime = Token{
+		enc: Encoding::Primitive,
+		tag: Tag::UtcTime,
+		depth: 0,
+		header: &[],
+		body: "491020181001Z".as_bytes()
+	};
+
+	assert_eq!(Time::from_token(&utctime).unwrap().to_rfc3339(), "2049-10-20T18:10:01+00:00");
+
+	let utctime_19thcent = Token{
+		enc: Encoding::Primitive,
+		tag: Tag::UtcTime,
+		depth: 0,
+		header: &[],
+		body: "991020181001Z".as_bytes()
+	};
+
+	assert_eq!(Time::from_token(&utctime_19thcent).unwrap().to_rfc3339(), "1999-10-20T18:10:01+00:00");
+
+	let generalized = Token{
+		enc: Encoding::Primitive,
+		tag: Tag::GeneralizedTime,
+		depth: 0,
+		header: &[],
+		body: "20991020181001Z".as_bytes()
+	};
+
+	assert_eq!(Time::from_token(&generalized).unwrap().to_rfc3339(), "2099-10-20T18:10:01+00:00");
+}
+
+#[test]
+fn invalid_time() {
+	let invalid_encoding = Token{
+		enc: Encoding::Constructed,
+		tag: Tag::UtcTime,
+		depth: 0,
+		header: &[],
+		body: "491020181001Z".as_bytes()
+	};
+
+	assert_eq!(Time::from_token(&invalid_encoding).unwrap_err(), MalformedToken);
+
+	let invalid_time = Token{
+		enc: Encoding::Primitive,
+		tag: Tag::UtcTime,
+		depth: 0,
+		header: &[],
+		body: "990231181001Z".as_bytes()
+	};
+
+	assert_eq!(Time::from_token(&invalid_time).unwrap_err(), MalformedToken);
+
+	let truncated = Token{
+		enc: Encoding::Primitive,
+		tag: Tag::GeneralizedTime,
+		depth: 0,
+		header: &[],
+		body: "20991020181001".as_bytes()
+	};
+
+	assert_eq!(Time::from_token(&truncated).unwrap_err(), MalformedToken);
 }

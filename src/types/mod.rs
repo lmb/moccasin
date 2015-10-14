@@ -4,6 +4,7 @@ pub use self::int::Int;
 pub use self::bool::Bool;
 pub use self::null::Null;
 pub use self::bitstring::Bitstring;
+pub use self::time::Time;
 
 mod string;
 #[macro_use]
