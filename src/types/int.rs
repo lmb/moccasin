@@ -3,8 +3,8 @@ use std::ops::{Shl, BitXor, BitOr};
 use num::traits::{Signed, NumCast, cast};
 
 use {Token, Encoding};
-use super::TypeError;
-use super::TypeError::*;
+use Error;
+use Error::*;
 
 #[derive(Debug)]
 pub struct Int<T>(pub T)
@@ -14,13 +14,13 @@ pub struct Int<T>(pub T)
 impl<T> Int<T>
 	where T: Copy + Signed + NumCast + Shl<u8, Output = T> + BitXor<Output = T> + BitOr<Output = T>
 {
-	pub fn from_token(token: &Token) -> Result<Int<T>, TypeError> {
+	pub fn from_token(token: &Token) -> Result<Int<T>, Error> {
 		if token.enc != Encoding::Primitive {
-			return Err(Malformed);
+			return Err(MalformedToken);
 		}
 
 		if token.body.len() == 0 {
-			return Err(Malformed);
+			return Err(MalformedToken);
 		}
 
 		if token.body.len() > size_of::<T>() {
@@ -35,7 +35,7 @@ impl<T> Int<T>
 			};
 
 			if leading == 0b0000_0000_0 || leading == 0b1111_1111_1 {
-				return Err(Malformed)
+				return Err(MalformedToken)
 			}
 		}
 

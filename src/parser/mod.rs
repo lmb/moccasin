@@ -1,21 +1,14 @@
 mod iter;
 mod stack;
 
+use Error;
+use Error::*;
+
 macro_rules! try_opt {
 	($expr:expr, $err:path) => (match $expr {
 		::std::option::Option::Some(val) => val,
 		::std::option::Option::None => return Err($err)
 	})
-}
-
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub enum ParseError {
-	BufferTooShort,
-	InvalidMultipartTag,
-	MultipartTagOverflow,
-	MalformedToken,
-	TokenTooLong,
-	NestedTooDeep
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -34,7 +27,6 @@ pub enum Encoding {
 
 #[derive(Debug, PartialEq)]
 pub enum Tag {
-	Eoc,
 	Bool,
 	Int,
 	Bitstring,
@@ -50,7 +42,9 @@ pub enum Tag {
 	UtcTime,
 	GeneralizedTime,
 	VisibleString,
-	Composed(Class, usize)
+	Composed(Class, usize),
+	String,
+	Time
 }
 
 const TAG_CLASS_MASK: u8     = 0b11000000;
@@ -64,14 +58,14 @@ const MULTIPART_ID: usize    = 31;
 impl Tag
 {
 	// 8.1.2
-	fn from_bytes<'a, I>(iter: &mut I) -> Result<(Encoding, Tag), ParseError>
+	fn from_bytes<'a, I>(iter: &mut I) -> Result<(Encoding, Tag), Error>
 		where I: Iterator<Item=&'a u8>
 	{
 		use self::Class::*;
 		use self::Encoding::*;
 		use self::Tag::*;
 
-		let byte = try_opt!(iter.next(), ParseError::BufferTooShort);
+		let byte = try_opt!(iter.next(), BufferTooShort);
 
 		let class = match (byte & TAG_CLASS_MASK) >> 6 {
 			0 => Universal,
@@ -94,7 +88,6 @@ impl Tag
 
 		Ok((encoding, match class {
 			Universal => match id {
-				 0 => Eoc,
 				 1 => Bool,
 				 2 => Int,
 				 3 => Bitstring,
@@ -117,11 +110,9 @@ impl Tag
 	}
 
 	// 8.1.2.4.2
-	fn read_multipart_tag<'a, I>(iter: &mut I) -> Result<usize, ParseError>
+	fn read_multipart_tag<'a, I>(iter: &mut I) -> Result<usize, Error>
 		where I: Iterator<Item=&'a u8>
 	{
-		use self::ParseError::*;
-
 		let mut tag = 0 as usize;
 		for byte in iter {
 			// Leading tag bytes must not be 0 under DER rules
@@ -162,10 +153,8 @@ const LENGTH_MASK: u8 = 0b01111111;
 const MIN_LONG_LENGTH: usize = 128;
 
 impl<'a> Token<'a> {
-	fn from_bytes<'b>(iter: &mut iter::Iter<'b>, depth: u8) -> Result<Token<'b>, ParseError>
+	fn from_bytes<'b>(iter: &mut iter::Iter<'b>, depth: u8) -> Result<Token<'b>, Error>
 	{
-		use self::ParseError::*;
-
 		let hdr_start = iter.pos();
 
 		let (encoding, tag) = try!(Tag::from_bytes(iter));
@@ -201,10 +190,9 @@ impl<'a> Token<'a> {
 		})
 	}
 
-	fn read_longform_length<'b, I>(num_bytes: u8, iter: &mut I) -> Result<usize, ParseError>
+	fn read_longform_length<'b, I>(num_bytes: u8, iter: &mut I) -> Result<usize, Error>
 		where I: Iterator<Item=&'b u8>
 	{
-		use self::ParseError::*;
 		use std::mem::size_of;
 
 		if num_bytes == 0 {
@@ -235,7 +223,7 @@ impl<'a> Token<'a> {
 
 pub struct Parser<'a> {
 	iter: iter::Iter<'a>,
-	err: Option<ParseError>,
+	err: bool,
 	stack: stack::FixedStack
 }
 
@@ -243,13 +231,12 @@ impl<'a> Parser<'a> {
 	pub fn new(bytes: &'a [u8]) -> Parser<'a> {
 		Parser {
 			iter: iter::Iter::new(bytes),
-			err: None,
+			err: false,
 			stack: stack::FixedStack::new()
 		}
 	}
 
-	fn parse(&mut self) -> Result<Token<'a>, ParseError> {
-		use self::ParseError::*;
+	fn parse(&mut self) -> Result<Token<'a>, Error> {
 		use self::Encoding::*;
 
 		let token = try!(Token::from_bytes(&mut self.iter, self.stack.depth()));
@@ -294,24 +281,20 @@ impl<'a> Parser<'a> {
 }
 
 impl<'a> Iterator for Parser<'a> {
-	type Item = Result<Token<'a>, ParseError>;
+	type Item = Result<Token<'a>, Error>;
 
-	fn next(&mut self) -> Option<Result<Token<'a>, ParseError>> {
-		if let Some(_) = self.err {
-			return None;
-		}
- 
-		if self.iter.peek().is_none() {
+	fn next(&mut self) -> Option<Result<Token<'a>, Error>> {
+		if self.err || self.iter.peek().is_none() {
 			return None;
 		}
 
-		match self.parse() {
-			Err(why) => {
-				self.err = Some(why);
-				Some(Err(why))
-			},
-			ok => Some(ok)
+		let result = self.parse();
+
+		if let Err(_) = result {
+			self.err = true;
 		}
+
+		Some(result)
 	}
 }
 

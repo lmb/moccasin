@@ -1,8 +1,8 @@
-use super::*;
-use super::Encoding::*;
-use super::Class::*;
-use super::Tag::*;
-use super::ParseError::*;
+use {Tag, Parser};
+use Encoding::*;
+use Class::*;
+use Tag::*;
+use Error::*;
 use super::iter::Iter;
 
 #[test]

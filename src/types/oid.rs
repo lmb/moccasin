@@ -2,9 +2,8 @@ use std::{cmp, fmt};
 use std::iter::Peekable;
 use std::slice::Iter;
 
-use {Encoding, Token};
-use super::TypeError;
-use super::TypeError::*;
+use {Encoding, Token, Error};
+use Error::*;
 
 const ARC_SHIFT: u8 = 1<<7;
 const ARC_MASK:  u8 = (1<<7) - 1;
@@ -45,13 +44,13 @@ pub struct Oid {
 }
 
 impl Oid {
-	pub fn from_token(token: &Token) -> Result<Oid, TypeError> {
+	pub fn from_token(token: &Token) -> Result<Oid, Error> {
 		if token.enc != Encoding::Primitive {
-			return Err(Malformed);
+			return Err(MalformedToken);
 		}
 
 		if token.body.len() == 0 {
-			return Err(Malformed)
+			return Err(MalformedToken)
 		}
 
 		let mut oid = Oid{arcs: [0u32; 12], n: 0};
@@ -79,19 +78,19 @@ impl Oid {
 		Ok(oid)
 	}
 
-	fn parse_arc<'a>(iter: &mut Iterator<Item=&'a u8>) -> Result<u32, TypeError> {
+	fn parse_arc<'a>(iter: &mut Iterator<Item=&'a u8>) -> Result<u32, Error> {
 		let mut arc = 0u32;
 
 		for byte in iter {
 			if arc == 0 && *byte == 0x80 {
 				// 8.19.2 "the leading octet of the subidentifier shall not have the
 				// value 0x80"
-				return Err(Malformed)
+				return Err(MalformedToken)
 			}
 
 			arc = match arc.checked_mul(ARC_SHIFT as u32) {
 				Some(v) => v | (*byte & ARC_MASK) as u32,
-				None => return Err(Unsupported)
+				None => return Err(OutOfMemory)
 			};
 
 			// 8.19.2 "[...] last in the series: bit 8 of the last octet is zero;"
@@ -100,12 +99,12 @@ impl Oid {
 			}
 		}
 
-		return Err(Malformed)
+		return Err(MalformedToken)
 	}
 
-	fn append(&mut self, arc: u32) -> Result<(), TypeError> {
+	fn append(&mut self, arc: u32) -> Result<(), Error> {
 		if self.n as usize >= self.arcs.len() {
-			return Err(Unsupported);
+			return Err(OutOfMemory);
 		}
 
 		self.arcs[self.n as usize] = arc;
@@ -113,7 +112,7 @@ impl Oid {
 		if let Some(n) = self.n.checked_add(1) {
 			self.n = n;
 		} else {
-			return Err(Unsupported);
+			return Err(UnsupportedOid);
 		}
 
 		Ok(())

@@ -1,6 +1,6 @@
 use {Token, Encoding, Tag};
 use types::{String, Oid, StaticOid, Int};
-use types::TypeError::*;
+use Error::*;
 
 #[test]
 fn utf8string() {
@@ -25,7 +25,7 @@ fn unsupported_asciistring() {
 		body: "Unsupported characters: \x07\x00\x10".as_bytes(),
 	};
 
-	assert_eq!(String::from_token(&token).unwrap_err(), Unsupported);
+	assert_eq!(String::from_token(&token).unwrap_err(), UnsupportedString);
 }
 
 #[test]
@@ -51,7 +51,7 @@ fn invalid_printablestring() {
 		body: "Unsupported characters: *;<>@".as_bytes(),
 	};
 
-	assert_eq!(String::from_token(&token).unwrap_err(), Malformed);
+	assert_eq!(String::from_token(&token).unwrap_err(), MalformedToken);
 }
 
 #[test]
@@ -64,7 +64,7 @@ fn constructed_string() {
 		body: "äöüß·".as_bytes(),
 	};
 
-	assert_eq!(String::from_token(&token).unwrap_err(), Malformed);
+	assert_eq!(String::from_token(&token).unwrap_err(), MalformedToken);
 }
 
 static MYOID: StaticOid = oid![2,2,11136];
@@ -93,7 +93,7 @@ fn constructed_oid() {
 		body: &[0b0_1010010, 0b1_1010111, 0b0_0000000]
 	};
 
-	assert_eq!(Oid::from_token(&token).unwrap_err(), Malformed);
+	assert_eq!(Oid::from_token(&token).unwrap_err(), MalformedToken);
 }
 
 #[test]
@@ -106,7 +106,7 @@ fn truncated_oid() {
 		body: &[0b0_1010010, 0b1_1010111, 0b1_0000000]
 	};
 
-	assert_eq!(Oid::from_token(&token).unwrap_err(), Malformed);
+	assert_eq!(Oid::from_token(&token).unwrap_err(), MalformedToken);
 }
 
 #[test]
@@ -119,7 +119,7 @@ fn empty_oid() {
 		body: &[]
 	};
 
-	assert_eq!(Oid::from_token(&token).unwrap_err(), Malformed);
+	assert_eq!(Oid::from_token(&token).unwrap_err(), MalformedToken);
 }
 
 #[test]
@@ -160,7 +160,7 @@ fn empty_int() {
 		body: &[]
 	};
 
-	assert_eq!(Int::<i32>::from_token(&token).unwrap_err(), Malformed);
+	assert_eq!(Int::<i32>::from_token(&token).unwrap_err(), MalformedToken);
 }
 
 #[test]
@@ -173,7 +173,7 @@ fn constructed_int() {
 		body: &[]
 	};
 
-	assert_eq!(Int::<i32>::from_token(&token).unwrap_err(), Malformed);
+	assert_eq!(Int::<i32>::from_token(&token).unwrap_err(), MalformedToken);
 }
 
 #[test]
@@ -186,7 +186,7 @@ fn invalid_int_padding() {
 		body: &[0b11111111, 0b1_0000000]
 	};
 
-	assert_eq!(Int::<i32>::from_token(&token_ones).unwrap_err(), Malformed);
+	assert_eq!(Int::<i32>::from_token(&token_ones).unwrap_err(), MalformedToken);
 
 	let token_zeros = Token{
 		enc: Encoding::Primitive,
@@ -196,7 +196,7 @@ fn invalid_int_padding() {
 		body: &[0b00000000, 0b0_0000000]
 	};
 
-	assert_eq!(Int::<i32>::from_token(&token_zeros).unwrap_err(), Malformed);
+	assert_eq!(Int::<i32>::from_token(&token_zeros).unwrap_err(), MalformedToken);
 }
 
 #[test]

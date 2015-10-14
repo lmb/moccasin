@@ -7,13 +7,5 @@ mod string;
 mod oid;
 mod int;
 
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub enum TypeError {
-	Unsupported,
-	TypeMismatch,
-	Malformed,
-	OutOfMemory,
-}
-
 #[cfg(test)]
 mod tests;

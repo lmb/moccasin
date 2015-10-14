@@ -1,13 +1,12 @@
 use std::str;
 use std::convert;
 
-use {Token, Encoding, Tag};
-use super::TypeError;
-use super::TypeError::*;
+use {Token, Encoding, Tag, Error};
+use Error::*;
 
-impl convert::From<str::Utf8Error> for TypeError {
-	fn from(_: str::Utf8Error) -> TypeError {
-		TypeError::Malformed
+impl convert::From<str::Utf8Error> for Error {
+	fn from(_: str::Utf8Error) -> Error {
+		MalformedToken
 	}
 }
 
@@ -15,9 +14,9 @@ impl convert::From<str::Utf8Error> for TypeError {
 pub struct String<'a>(pub &'a str);
 
 impl<'a> String<'a> {
-	pub fn from_token(token: &'a Token) -> Result<String<'a>, TypeError> {
+	pub fn from_token(token: &'a Token) -> Result<String<'a>, Error> {
 		if token.enc != Encoding::Primitive {
-			return Err(Malformed)
+			return Err(MalformedToken)
 		}
 
 		match token.tag {
@@ -26,24 +25,24 @@ impl<'a> String<'a> {
 			Tag::Ia5String       => Self::ascii_string(token.body),
 			Tag::VisibleString   => Self::ascii_string(token.body),
 			Tag::T61String       => Self::ascii_string(token.body),
-			_ => Err(TypeMismatch)
+			_ => Err(TokenMismatch)
 		}
 	}
 
-	fn printable_string(body: &'a [u8]) -> Result<String<'a>, TypeError> {
+	fn printable_string(body: &'a [u8]) -> Result<String<'a>, Error> {
 		// Allowed characters are ( to z, excluding *, ;, <, >, @
 		for byte in body {
 			match *byte as char {
-				'*' | ';' | '<' | '>' | '@' => return Err(Malformed),
+				'*' | ';' | '<' | '>' | '@' => return Err(MalformedToken),
 				'(' ... 'z' | ' '           => continue,
-				_                           => return Err(Malformed)
+				_                           => return Err(MalformedToken)
 			}
 		}
 
 		Ok(String(try!(str::from_utf8(body))))
 	}
 
-	fn ascii_string(body: &'a [u8]) -> Result<String<'a>, TypeError> {
+	fn ascii_string(body: &'a [u8]) -> Result<String<'a>, Error> {
 		/* Strictly speaking, control codes are allowed for Ia5String,
 		 * but since we don't have a way of dealing with code-page
 		 * switching we restrict the type. This is non-conformant to the
@@ -55,7 +54,7 @@ impl<'a> String<'a> {
 		for byte in body {
 			match *byte as char {
 				' ' ... '\x7f' => continue,
-				_              => return Err(Unsupported),
+				_              => return Err(UnsupportedString),
 			}
 		}
 
