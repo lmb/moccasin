@@ -7,3 +7,4 @@ authors = ["lmb <i@lmb.io>"]
 num = "0.1.27"
 bitflags = "0.3"
 chrono = "0.2"
+rustc-serialize = "0.3"
