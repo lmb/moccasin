@@ -89,15 +89,22 @@ fn malformed_nesting() {
 
 #[test]
 fn truncated_token() {
-	let data = [
+	let data1 = [
 		0b00_1_10000u8, 0b0_0001000,
 			0b00_0_00101, 0b0_0000000
 	];
 
-	let mut p = Parser::new(&data);
+	let mut p = Parser::new(&data1);
 
-	let why = p.parse().unwrap_err();
-	assert_eq!(why, BufferTooShort);
+	assert_eq!(p.parse().unwrap_err(), BufferTooShort);
+
+	let data2 = [
+		0b00_0_00000u8, 0b0_00000010
+	];
+
+	let mut p = Parser::new(&data2);
+
+	assert_eq!(p.parse().unwrap_err(), BufferTooShort);
 }
 
 #[test]

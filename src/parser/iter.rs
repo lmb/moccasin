@@ -34,12 +34,35 @@ impl<'a> Iterator for Iter<'a> {
 	}
 
 	fn size_hint(&self) -> (usize, Option<usize>) {
-		(self.slice.len(), Some(self.slice.len()))
+		let remaining = self.slice.len() - self.i;
+		(remaining, Some(remaining))
 	}
 }
 
 impl<'a> ExactSizeIterator for Iter<'a> {
 	fn len(&self) -> usize {
 		self.slice.len()
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::Iter;
+
+	#[test]
+	fn check_size_hint() {
+		static DATA: &'static [u8] = &[1,2,3];
+
+		let mut it = Iter::new(DATA);
+
+		assert_eq!(it.pos(), 0);
+		assert_eq!(it.len(), DATA.len());
+		assert_eq!(it.size_hint(), (DATA.len(), Some(DATA.len())));
+
+		it.next().unwrap();
+
+		assert_eq!(it.pos(), 1);
+		assert_eq!(it.len(), DATA.len());
+		assert_eq!(it.size_hint(), (DATA.len()-1, Some(DATA.len()-1)));
 	}
 }
