@@ -4,13 +4,6 @@ mod stack;
 use Error;
 use Error::*;
 
-macro_rules! try_opt {
-	($expr:expr, $err:path) => (match $expr {
-		::std::option::Option::Some(val) => val,
-		::std::option::Option::None => return Err($err)
-	})
-}
-
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Class {
 	Universal,
@@ -65,7 +58,7 @@ impl Tag
 		use self::Encoding::*;
 		use self::Tag::*;
 
-		let byte = try_opt!(iter.next(), BufferTooShort);
+		let byte = try!(iter.next().ok_or(BufferTooShort));
 
 		let class = match (byte & TAG_CLASS_MASK) >> 6 {
 			0 => Universal,
@@ -161,7 +154,7 @@ impl<'a> Token<'a> {
 
 		// Length (8.1.3)
 		let length = {
-			let byte = try_opt!(iter.next(), BufferTooShort);
+			let byte = try!(iter.next().ok_or(BufferTooShort));
 			let length = byte & LENGTH_MASK;
 
 			if (byte >> 7) == 1u8 {
@@ -207,7 +200,7 @@ impl<'a> Token<'a> {
 
 		let mut length: usize = 0;
 		for _ in 0..num_bytes {
-			let byte = *try_opt!(iter.next(), BufferTooShort) as usize;
+			let byte = *try!(iter.next().ok_or(BufferTooShort)) as usize;
 
 			length = (length << 8) | byte;
 		}
@@ -290,10 +283,7 @@ impl<'a> Iterator for Parser<'a> {
 
 		let result = self.parse();
 
-		if let Err(_) = result {
-			self.err = true;
-		}
-
+		self.err = result.is_err();
 		Some(result)
 	}
 }
