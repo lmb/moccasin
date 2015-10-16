@@ -40,12 +40,6 @@ pub enum Tag {
 	Time
 }
 
-const TAG_CLASS_MASK: u8     = 0b11000000;
-const TAG_ENCODING_MASK: u8  = 0b00100000;
-const TAG_ID_MASK: u8        = 0b00011111;
-
-const MULTIPART_MASK: u8     = 0b01111111;
-const MULTIPART_SHIFT: usize = 128;
 const MULTIPART_ID: usize    = 31;
 
 impl Tag
@@ -58,9 +52,13 @@ impl Tag
 		use self::Encoding::*;
 		use self::Tag::*;
 
+		const CLASS_MASK: u8    = 0b11000000;
+		const ENCODING_MASK: u8 = 0b00100000;
+		const ID_MASK: u8       = 0b00011111;
+
 		let byte = try!(iter.next().ok_or(BufferTooShort));
 
-		let class = match (byte & TAG_CLASS_MASK) >> 6 {
+		let class = match (byte & CLASS_MASK) >> 6 {
 			0 => Universal,
 			1 => Application,
 			2 => Context,
@@ -68,13 +66,13 @@ impl Tag
 			_ => unreachable!()
 		};
 
-		let encoding = match (byte & TAG_ENCODING_MASK) >> 5 {
+		let encoding = match (byte & ENCODING_MASK) >> 5 {
 			0 => Primitive,
 			1 => Constructed,
 			_ => unreachable!()
 		};
 
-		let id = match (byte & TAG_ID_MASK) as usize {
+		let id = match (byte & ID_MASK) as usize {
 			MULTIPART_ID => try!(Self::read_multipart_tag(iter)),
 			id => id
 		};
@@ -106,6 +104,9 @@ impl Tag
 	fn read_multipart_tag<'a, I>(iter: &mut I) -> Result<usize, Error>
 		where I: Iterator<Item=&'a u8>
 	{
+		const MULTIPART_MASK: u8     = 0b01111111;
+		const MULTIPART_SHIFT: usize = 128;
+
 		let mut tag = 0 as usize;
 		for byte in iter {
 			// Leading tag bytes must not be 0 under DER rules
@@ -142,9 +143,6 @@ pub struct Token<'a>{
 	pub body: &'a [u8],
 }
 
-const LENGTH_MASK: u8 = 0b01111111;
-const MIN_LONG_LENGTH: usize = 128;
-
 impl<'a> Token<'a> {
 	pub fn parser(&self) -> Parser<'a> {
 		Parser::new(self.body)
@@ -152,6 +150,8 @@ impl<'a> Token<'a> {
 
 	fn from_bytes<'b>(iter: &mut iter::Iter<'b>, depth: u8) -> Result<Token<'b>, Error>
 	{
+		const LENGTH_MASK: u8 = 0b01111111;
+
 		let hdr_start = iter.pos();
 
 		let (encoding, tag) = try!(Tag::from_bytes(iter));
@@ -191,6 +191,8 @@ impl<'a> Token<'a> {
 		where I: Iterator<Item=&'b u8>
 	{
 		use std::mem::size_of;
+
+		const MIN_LONG_LENGTH: usize = 128;
 
 		if num_bytes == 0 {
 			// Indefinite form is forbidden (X.690 11/2008 8.1.3.6)
