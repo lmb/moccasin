@@ -1,6 +1,6 @@
 use std::iter::Peekable;
 
-use {Parser, Token, Tag, Encoding, Error};
+use {Token, Tag, Encoding, Error};
 use Tag::*;
 use Encoding::*;
 use Error::{TokenMismatch, PrematureEof};
@@ -29,11 +29,15 @@ impl Matcher {
 		self
 	}
 
-	pub fn required<'a>(self, parser: &mut Peekable<Parser<'a>>) -> Result<Token<'a>, Error> {
+	pub fn required<'a, T>(self, parser: &mut T) -> Result<Token<'a>, Error>
+		where T: Iterator<Item=Result<Token<'a>, Error>>
+	{
 		self.required_at(parser, "<unknown>", 0, 0)
 	}
 
-	pub fn required_at<'a>(self, parser: &mut Peekable<Parser<'a>>, file: &'static str, line: u32, col: u32) -> Result<Token<'a>, Error> {
+	pub fn required_at<'a, T>(self, parser: &mut T, file: &'static str, line: u32, col: u32) -> Result<Token<'a>, Error>
+		where T: Iterator<Item=Result<Token<'a>, Error>>
+	{
 		match parser.next() {
 			Some(Ok(token)) => {
 				match self.matches(&token) {
@@ -50,7 +54,9 @@ impl Matcher {
 		}
 	}
 
-	pub fn optional<'a>(self, parser: &mut Peekable<Parser<'a>>) -> Option<Token<'a>> {
+	pub fn optional<'a, T>(self, parser: &mut Peekable<T>) -> Option<Token<'a>>
+		where T: Iterator<Item=Result<Token<'a>, Error>>
+	{
 		let matches = match parser.peek() {
 			Some(&Ok(ref token)) => self.matches(token),
 			_ => return None
