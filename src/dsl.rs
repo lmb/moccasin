@@ -94,10 +94,22 @@ macro_rules! req {
 		try!(<$ty>::from_token(&tok))
 	}};
 	( $p:expr => $depth:expr, $tag:expr, $enc:expr ) => {{
-		try!($crate::dsl::Matcher::new($depth, $tag).encoding($enc).required_at($p, file!(), line!(), column!()))
+		let matcher = $crate::dsl::Matcher::new($depth, $tag).encoding($enc);
+
+		if cfg!(debug_assertions) {
+			try!(matcher.required_at($p, file!(), line!(), column!()))
+		} else {
+			try!(matcher.required($p))
+		}
 	}};
 	( $p:expr => $depth:expr, $tag:expr ) => {{
-		try!($crate::dsl::Matcher::new($depth, $tag).required_at($p, file!(), line!(), column!()))
+		let matcher = $crate::dsl::Matcher::new($depth, $tag);
+
+		if cfg!(debug_assertions) {
+			try!(matcher.required_at($p, file!(), line!(), column!()))
+		} else {
+			try!(matcher.required($p))
+		}
 	}}
 }
 
