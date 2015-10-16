@@ -17,7 +17,7 @@ mod time;
 
 use {Token, Error};
 
-pub trait FromToken<'a> {
+pub trait FromToken<'a> where Self: Sized {
 	fn from_token(token: &Token<'a>) -> Result<Self, Error>;
 }
 
