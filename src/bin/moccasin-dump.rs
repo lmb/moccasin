@@ -6,9 +6,7 @@ use std::env;
 use rustc_serialize::hex::FromHex;
 use moccasin::prelude::*;
 
-// For some reason, cargo test builds this executable and complains about unused
-// code.
-#[allow(dead_code)]
+#[cfg(not(test))]
 fn main() {
 	let mut args = env::args();
 	args.next().unwrap();

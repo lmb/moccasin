@@ -1,47 +1,42 @@
 use std::iter::Peekable;
 
-use {Token, Tag, Encoding, Error};
-use Tag::*;
-use Encoding::*;
+use {Token, Tag, Error};
 use Error::{TokenMismatch, PrematureEof};
+use types::TokenType;
 
 pub struct Matcher {
-	tag: Tag,
-	depth: u8,
-	enc: Encoding
+	tag: Option<Tag>,
+	depth: u8
 }
 
 impl Matcher {
-	pub fn new(depth: u8, tag: Tag) -> Matcher {
+	pub fn new(depth: u8) -> Matcher {
 		Matcher {
 			depth: depth,
-			enc: match tag {
-				Sequence |
-				Set      => Constructed,
-				_        => Primitive
-			},
-			tag: tag
+			tag: None
 		}
 	}
 
-	pub fn encoding(mut self, enc: Encoding) -> Self {
-		self.enc = enc;
-		self
+	pub fn with_tag(depth: u8, tag: Tag) -> Matcher {
+		Matcher {
+			depth: depth,
+			tag: Some(tag)
+		}
 	}
 
-	pub fn required<'a, T>(self, parser: &mut T) -> Result<Token<'a>, Error>
-		where T: Iterator<Item=Result<Token<'a>, Error>>
+	pub fn required<'a, I, T>(self, parser: &mut I) -> Result<T, Error>
+		where I: Iterator<Item=Result<Token<'a>, Error>>, T: TokenType<'a>
 	{
 		self.required_at(parser, "<unknown>", 0, 0)
 	}
 
-	pub fn required_at<'a, T>(self, parser: &mut T, file: &'static str, line: u32, col: u32) -> Result<Token<'a>, Error>
-		where T: Iterator<Item=Result<Token<'a>, Error>>
+	pub fn required_at<'a, I, T>(self, parser: &mut I, file: &'static str, line: u32, col: u32) -> Result<T, Error>
+		where I: Iterator<Item=Result<Token<'a>, Error>>, T: TokenType<'a>
 	{
 		match parser.next() {
 			Some(Ok(token)) => {
-				match self.matches(&token) {
-					true  => Ok(token),
+				match self.matches::<T>(&token) {
+					true  => Ok(try!(T::from_token(&token))),
 					false => Err(TokenMismatch{
 						file: file,
 						line: line,
@@ -54,93 +49,66 @@ impl Matcher {
 		}
 	}
 
-	pub fn optional<'a, T>(self, parser: &mut Peekable<T>) -> Option<Token<'a>>
-		where T: Iterator<Item=Result<Token<'a>, Error>>
+	pub fn optional<'a, I, T>(self, parser: &mut Peekable<I>) -> Option<T>
+		where I: Iterator<Item=Result<Token<'a>, Error>>, T: TokenType<'a>
 	{
 		let matches = match parser.peek() {
-			Some(&Ok(ref token)) => self.matches(token),
+			Some(&Ok(ref token)) => self.matches::<T>(token),
 			_ => return None
 		};
 
-		match matches {
-			true  => parser.next().unwrap().ok(),
-			false => None
+		if matches {
+			return match T::from_token(&parser.next().unwrap().unwrap()) {
+				Ok(ty) => Some(ty),
+				_      => None
+			}
 		}
+
+		None
 	}
 
-	fn matches(&self, token: &Token) -> bool {
-		token.enc   == self.enc   &&
-		token.depth == self.depth &&
+	fn matches<'a, T>(&self, token: &Token) -> bool
+		where T: TokenType<'a>
+	{
+		token.depth == self.depth    &&
+		token.enc   == T::encoding() &&
 		match self.tag {
-			String => match token.tag {
-				Ia5String       => true,
-				VisibleString   => true,
-				Utf8String      => true,
-				PrintableString => true,
-				_                    => false
-			},
-			Time => match token.tag {
-				GeneralizedTime => true,
-				UtcTime         => true,
-				_                    => false
-			},
-			ref other => *other == token.tag
+			Some(tag) => token.tag == tag,
+			None      => T::matches(token.tag)
 		}
 	}
 }
 
 #[macro_export]
 macro_rules! req {
-	( $p:expr => $depth:expr, $tag:expr, $enc:expr; $ty:ty ) => {{
-		let tok = req!{ $p => $depth, $tag, $enc };
-		try!(<$ty>::from_token(&tok))
-	}};
-	( $p:expr => $depth:expr, $tag:expr; $ty:ty ) => {{
-		let tok = req!{ $p => $depth, $tag };
-		try!(<$ty>::from_token(&tok))
-	}};
-	( $p:expr => $depth:expr, $tag:expr, $enc:expr ) => {{
-		let matcher = $crate::dsl::Matcher::new($depth, $tag).encoding($enc);
+	( $p:expr => $depth:expr, $ty:ty > ($class:expr, $id:expr) ) => {{
+		let tag = $crate::Tag::Composed($class, $id);
+		let matcher = $crate::dsl::Matcher::with_tag($depth, tag);
 
 		if cfg!(debug_assertions) {
-			try!(matcher.required_at($p, file!(), line!(), column!()))
+			try!(matcher.required_at::<_, $ty>($p, file!(), line!(), column!()))
 		} else {
-			try!(matcher.required($p))
+			try!(matcher.required::<_, $ty>($p))
 		}
 	}};
-	( $p:expr => $depth:expr, $tag:expr ) => {{
-		let matcher = $crate::dsl::Matcher::new($depth, $tag);
+	( $p:expr => $depth:expr, $ty:ty ) => {{
+		let matcher = $crate::dsl::Matcher::new($depth);
 
 		if cfg!(debug_assertions) {
-			try!(matcher.required_at($p, file!(), line!(), column!()))
+			try!(matcher.required_at::<_, $ty>($p, file!(), line!(), column!()))
 		} else {
-			try!(matcher.required($p))
+			try!(matcher.required::<_, $ty>($p))
 		}
 	}}
 }
 
 #[macro_export]
 macro_rules! opt {
-	( $p:expr => $depth:expr, $tag:expr, $enc:expr; $ty:ty ) => {{
-		let tok = opt!{ $p => $depth, $tag, $enc };
-
-		match tok {
-			Some(tok) => Some(try!(<$ty>::from_token(&tok))),
-			None => None
-		}
+	( $p:expr => $depth:expr, $ty:ty > ($class:expr, $id:expr) ) => {{
+		let tag = $crate::Tag::Composed($class, $id);
+		$crate::dsl::Matcher::with_tag($depth, tag).optional::<_, $ty>($p)
 	}};
-	( $p:expr => $depth:expr, $tag:expr; $ty:ty ) => {{
-		let tok = opt!{ $p => $depth, $tag };
-
-		match tok {
-			Some(tok) => Some(try!(<$ty>::from_token(&tok))),
-			None => None
-		}
-	}};
-	( $p:expr => $depth:expr, $tag:expr, $enc:expr ) => {{
-		$crate::dsl::Matcher::new($depth, $tag).encoding($enc).optional($p)
-	}};
-	( $p:expr => $depth:expr, $tag:expr ) => {{
-		$crate::dsl::Matcher::new($depth, $tag).optional($p)
+	( $p:expr => $depth:expr, $ty:ty ) => {{
+		$crate::dsl::Matcher::new($depth).optional::<_, $ty>($p)
 	}}
 }

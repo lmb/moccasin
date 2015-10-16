@@ -1,5 +1,5 @@
 use {Token, Encoding, Tag};
-use types::{String, Oid, ConstOid, Int, Bitstring, Null, Bool, Time, FromToken};
+use types::{String, Oid, ConstOid, Int, Bitstring, Null, Bool, Time, TokenType};
 use Error::*;
 
 #[test]
@@ -30,6 +30,8 @@ fn unsupported_asciistring() {
 
 #[test]
 fn printablestring() {
+	assert_eq!(String::encoding(), Encoding::Primitive);
+
 	let token = Token{
 		enc: Encoding::Primitive,
 		tag: Tag::PrintableString,
@@ -54,23 +56,12 @@ fn invalid_printablestring() {
 	assert_eq!(String::from_token(&token).unwrap_err(), MalformedToken);
 }
 
-#[test]
-fn constructed_string() {
-	let token = Token{
-		enc: Encoding::Constructed,
-		tag: Tag::Utf8String,
-		depth: 0,
-		header: &[],
-		body: "äöüß·".as_bytes(),
-	};
-
-	assert_eq!(String::from_token(&token).unwrap_err(), MalformedToken);
-}
-
 static MYOID: ConstOid = oid![2,2,11136];
 
 #[test]
 fn oid() {
+	assert_eq!(Oid::encoding(), Encoding::Primitive);
+
 	let token = Token{
 		enc: Encoding::Primitive,
 		tag: Tag::Oid,
@@ -84,19 +75,6 @@ fn oid() {
 
 	const MYOID2: ConstOid = oid![2,2,11136];
 	assert_eq!(oid, MYOID2);
-}
-
-#[test]
-fn constructed_oid() {
-	let token = Token{
-		enc: Encoding::Constructed,
-		tag: Tag::Oid,
-		depth: 0,
-		header: &[],
-		body: &[0b0_1010010, 0b1_1010111, 0b0_0000000]
-	};
-
-	assert_eq!(Oid::from_token(&token).unwrap_err(), MalformedToken);
 }
 
 #[test]
@@ -127,6 +105,8 @@ fn empty_oid() {
 
 #[test]
 fn int() {
+	assert_eq!(Int::<i32>::encoding(), Encoding::Primitive);
+
 	let token = Token{
 		enc: Encoding::Primitive,
 		tag: Tag::Int,
@@ -157,19 +137,6 @@ fn negative_int() {
 fn empty_int() {
 	let token = Token{
 		enc: Encoding::Primitive,
-		tag: Tag::Int,
-		depth: 0,
-		header: &[],
-		body: &[]
-	};
-
-	assert_eq!(Int::<i32>::from_token(&token).unwrap_err(), MalformedToken);
-}
-
-#[test]
-fn constructed_int() {
-	let token = Token{
-		enc: Encoding::Constructed,
 		tag: Tag::Int,
 		depth: 0,
 		header: &[],
@@ -217,6 +184,8 @@ fn decode_large_int() {
 
 #[test]
 fn bool() {
+	assert_eq!(Bool::encoding(), Encoding::Primitive);
+
 	let true_tok = Token{
 		enc: Encoding::Primitive,
 		tag: Tag::Bool,
@@ -261,20 +230,12 @@ fn invalid_bool() {
 	};
 
 	assert_eq!(Bool::from_token(&too_long).unwrap_err(), MalformedToken);
-
-	let wrong_encoding = Token{
-		enc: Encoding::Constructed,
-		tag: Tag::Bool,
-		depth: 0,
-		header: &[],
-		body: &[0x0]
-	};
-
-	assert_eq!(Bool::from_token(&wrong_encoding).unwrap_err(), MalformedToken);
 }
 
 #[test]
 fn null() {
+	assert_eq!(Null::encoding(), Encoding::Primitive);
+
 	let ok = Token{
 		enc: Encoding::Primitive,
 		tag: Tag::Null,
@@ -297,20 +258,12 @@ fn invalid_null() {
 	};
 
 	assert_eq!(Null::from_token(&nonempty).unwrap_err(), MalformedToken);
-
-	let wrong_encoding = Token{
-		enc: Encoding::Constructed,
-		tag: Tag::Null,
-		depth: 0,
-		header: &[],
-		body: &[]
-	};
-
-	assert_eq!(Null::from_token(&wrong_encoding).unwrap_err(), MalformedToken);
 }
 
 #[test]
 fn bitstring() {
+	assert_eq!(Bitstring::encoding(), Encoding::Primitive);
+
 	let ok = Token{
 		enc: Encoding::Primitive,
 		tag: Tag::Bitstring,
@@ -348,16 +301,6 @@ fn invalid_bitstring() {
 	};
 
 	assert_eq!(Bitstring::from_token(&empty).unwrap_err(), MalformedToken);
-
-	let wrong_encoding = Token{
-		enc: Encoding::Constructed,
-		tag: Tag::Bitstring,
-		depth: 0,
-		header: &[],
-		body: &[0x0]
-	};
-
-	assert_eq!(Bitstring::from_token(&wrong_encoding).unwrap_err(), MalformedToken);
 }
 
 #[test]
@@ -395,6 +338,8 @@ fn invalid_bitstring_padding() {
 
 #[test]
 fn time() {
+	assert_eq!(Time::encoding(), Encoding::Primitive);
+
 	let utctime = Token{
 		enc: Encoding::Primitive,
 		tag: Tag::UtcTime,
@@ -428,16 +373,6 @@ fn time() {
 
 #[test]
 fn invalid_time() {
-	let invalid_encoding = Token{
-		enc: Encoding::Constructed,
-		tag: Tag::UtcTime,
-		depth: 0,
-		header: &[],
-		body: "491020181001Z".as_bytes()
-	};
-
-	assert_eq!(Time::from_token(&invalid_encoding).unwrap_err(), MalformedToken);
-
 	let invalid_time = Token{
 		enc: Encoding::Primitive,
 		tag: Tag::UtcTime,

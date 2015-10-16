@@ -2,8 +2,8 @@ use std::{cmp, fmt};
 use std::iter::Peekable;
 use std::slice::Iter;
 
-use {Encoding, Token, Error};
-use types::FromToken;
+use {Encoding, Tag, Token, Error};
+use types::TokenType;
 use Error::*;
 
 const ARC_SHIFT: u8 = 1<<7;
@@ -44,12 +44,16 @@ pub struct Oid {
 	n: u8,
 }
 
-impl<'a> FromToken<'a> for Oid {
-	fn from_token(token: &Token) -> Result<Oid, Error> {
-		if token.enc != Encoding::Primitive {
-			return Err(MalformedToken);
-		}
+impl<'a> TokenType<'a> for Oid {
+	fn matches(tag: Tag) -> bool {
+		tag == Tag::Oid
+	}
 
+	fn encoding() -> Encoding {
+		Encoding::Primitive
+	}
+
+	fn from_token(token: &Token) -> Result<Oid, Error> {
 		if token.body.len() == 0 {
 			return Err(MalformedToken)
 		}

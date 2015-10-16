@@ -2,10 +2,10 @@ use std::str::from_utf8;
 use std::num::ParseIntError;
 use std::convert::From;
 
-use {Token, Error};
-use types::FromToken;
+use {Token, Tag, Error};
+use types::TokenType;
 use Error::MalformedToken;
-use Encoding::Primitive;
+use Encoding;
 use Tag::{UtcTime, GeneralizedTime};
 
 use chrono::*;
@@ -23,12 +23,20 @@ impl From<ParseIntError> for Error {
 	}
 }
 
-impl<'a> FromToken<'a> for Time {
-	fn from_token(token: &Token<'a>) -> Result<Time, Error> {
-		if token.enc != Primitive {
-			return Err(MalformedToken);
+impl<'a> TokenType<'a> for Time {
+	fn matches(tag: Tag) -> bool {
+		match tag {
+			Tag::UtcTime         |
+			Tag::GeneralizedTime => true,
+			_                    => false
 		}
+	}
 
+	fn encoding() -> Encoding {
+		Encoding::Primitive
+	}
+
+	fn from_token(token: &Token<'a>) -> Result<Time, Error> {
 		if token.body[token.body.len()-1] != 'Z' as u8 {
 			return Err(MalformedToken);
 		}

@@ -1,14 +1,22 @@
-use {Token, Error};
-use types::FromToken;
+use {Token, Tag, Error};
+use types::TokenType;
 use Error::MalformedToken;
-use Encoding::Primitive;
+use Encoding;
 
 #[derive(Debug)]
 pub struct Bool(pub bool);
 
-impl<'a> FromToken<'a> for Bool {
+impl<'a> TokenType<'a> for Bool {
+	fn matches(tag: Tag) -> bool {
+		tag == Tag::Bool
+	}
+
+	fn encoding() -> Encoding {
+		Encoding::Primitive
+	}
+
 	fn from_token(token: &Token) -> Result<Bool, Error> {
-		if token.body.len() != 1 || token.enc != Primitive {
+		if token.body.len() != 1 {
 			return Err(MalformedToken);
 		}
 

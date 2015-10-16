@@ -1,17 +1,25 @@
-use {Token, Error};
-use types::FromToken;
+use {Token, Tag, Error};
+use types::TokenType;
 use Error::MalformedToken;
-use Encoding::Primitive;
+use Encoding;
 
 #[derive(Debug)]
 pub struct Bitstring<'a>(&'a[u8], u8);
 
-impl<'a> FromToken<'a> for Bitstring<'a> {
+impl<'a> TokenType<'a> for Bitstring<'a> {
+	fn matches(tag: Tag) -> bool {
+		tag == Tag::Bitstring
+	}
+
+	fn encoding() -> Encoding {
+		Encoding::Primitive
+	}
+
 	fn from_token(token: &Token<'a>) -> Result<Bitstring<'a>, Error> {
 		// 8.6.2.2 and 10.2
 		// At least one byte of body (which specifies unused bits in last byte)
 		// and of primitive encoding.
-		if token.body.len() < 1 || token.enc != Primitive {
+		if token.body.len() < 1 {
 			return Err(MalformedToken);
 		}
 

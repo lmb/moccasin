@@ -18,7 +18,7 @@ pub enum Encoding {
 	Constructed
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Tag {
 	Bool,
 	Int,
@@ -35,9 +35,7 @@ pub enum Tag {
 	UtcTime,
 	GeneralizedTime,
 	VisibleString,
-	Composed(Class, usize),
-	String,
-	Time
+	Composed(Class, usize)
 }
 
 const MULTIPART_ID: usize    = 31;
@@ -144,10 +142,6 @@ pub struct Token<'a>{
 }
 
 impl<'a> Token<'a> {
-	pub fn parser(&self) -> Parser<'a> {
-		Parser::new(self.body)
-	}
-
 	fn from_bytes<'b>(iter: &mut iter::Iter<'b>, depth: u8) -> Result<Token<'b>, Error>
 	{
 		const LENGTH_MASK: u8 = 0b01111111;

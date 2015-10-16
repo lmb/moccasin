@@ -1,8 +1,4 @@
 pub use std::iter::Peekable;
-
-pub use {Parser, types};
-pub use types::FromToken;
-
-pub use Tag::*;
+pub use Parser;
+pub use types::*;
 pub use Class::*;
-pub use Encoding::*;
