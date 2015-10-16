@@ -1,10 +1,6 @@
-use std::mem::size_of;
-use std::ops::{Shl, Shr, BitOr};
-use num::traits::{Unsigned, NumCast, cast};
-
 use {Token, Error};
 use types::FromToken;
-use Error::{MalformedToken, OutOfMemory};
+use Error::MalformedToken;
 use Encoding::Primitive;
 
 #[derive(Debug)]
@@ -59,19 +55,20 @@ impl<'a> FromToken<'a> for Bitstring<'a> {
 }
 
 impl<'a> Bitstring<'a> {
-	pub fn as_unsigned<T>(&self) -> Result<T, Error>
-		where T: Copy + Unsigned + NumCast + Shl<u8, Output = T> + Shr<u8, Output=T> + BitOr<Output = T>
-	{
-		if self.0.len() > size_of::<T>() {
-			return Err(OutOfMemory);
+	pub fn len_bits(&self) -> usize {
+		self.0.len() * 8 - (self.1 as usize)
+	}
+
+	pub fn is_set(&self, pos: usize) -> bool {
+		// According to X.680 22.7 & X.690 11.2.2 trailing 0 will be omitted.
+		// Treat them as default false.
+		if pos >= self.len_bits() {
+			return false;
 		}
 
-		let mut result = T::zero();
+		let i = pos / 8;
+		let mask = 1 << (8 - (pos as u8 % 8));
 
-		for byte in self.0 {
-			result = (result << 8u8) | cast(*byte).unwrap();
-		}
-
-		Ok(result >> self.1)
+		self.0[i] & mask != 0
 	}
 }
