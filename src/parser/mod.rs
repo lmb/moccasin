@@ -146,6 +146,10 @@ const LENGTH_MASK: u8 = 0b01111111;
 const MIN_LONG_LENGTH: usize = 128;
 
 impl<'a> Token<'a> {
+	pub fn parser(&self) -> Parser<'a> {
+		Parser::new(self.body)
+	}
+
 	fn from_bytes<'b>(iter: &mut iter::Iter<'b>, depth: u8) -> Result<Token<'b>, Error>
 	{
 		let hdr_start = iter.pos();
@@ -242,20 +246,20 @@ impl<'a> Parser<'a> {
 			}
 		}
 
-		match token {
-			Token{enc: Primitive, body, ..} => {
+		match token.enc {
+			Primitive => {
 				// Skip contents for primitive tokens
-				for _ in 0..body.len() {
+				for _ in 0..token.body.len() {
 					if let None = self.iter.next() {
 						return Err(BufferTooShort);
 					}
 				}
 			},
-			Token{enc: Constructed, ..} => {
+			Constructed => {
 				if let Err(_) = self.stack.push(token_end) {
 					return Err(NestedTooDeep)
 				}
-			}
+			},
 		}
 
 		let pos = self.iter.pos();
