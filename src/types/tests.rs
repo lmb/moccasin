@@ -316,22 +316,15 @@ fn bitstring() {
 		tag: Tag::Bitstring,
 		depth: 0,
 		header: &[],
-		body: &[0x4, 0xA3, 0xB4, 0xF0]
+		body: &[0x5, 0b10100000]
 	};
 
-	let r1 = Bitstring::from_token(&ok).unwrap();
-	assert_eq!(r1.as_unsigned::<u32>(), Ok(0xA3B4F));
+	let bs = Bitstring::from_token(&ok).unwrap();
 
-	let empty = Token{
-		enc: Encoding::Primitive,
-		tag: Tag::Bitstring,
-		depth: 0,
-		header: &[],
-		body: &[0x0]
-	};
-
-	let r2 = Bitstring::from_token(&empty).unwrap();
-	assert_eq!(r2.as_unsigned::<u16>(), Ok(0));
+	assert_eq!(bs.is_set(0), true);
+	assert_eq!(bs.is_set(1), false);
+	assert_eq!(bs.is_set(2), true);
+	assert_eq!(bs.is_set(5000), false);
 }
 
 #[test]

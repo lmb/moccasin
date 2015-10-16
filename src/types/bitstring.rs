@@ -67,7 +67,7 @@ impl<'a> Bitstring<'a> {
 		}
 
 		let i = pos / 8;
-		let mask = 1 << (8 - (pos as u8 % 8));
+		let mask = 1 << (7 - ((pos % 8) as u8));
 
 		self.0[i] & mask != 0
 	}
